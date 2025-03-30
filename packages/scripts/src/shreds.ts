@@ -31,14 +31,16 @@ let last_shred_time = Date.now();
 socket.addEventListener("message", (event: MessageEvent) => {
   const now = Date.now();
   try {
-    const data = JSON.parse(event.data as string) as WebSocketMessage;
+    const data = JSON.parse(event.data as string) ;
+    if (data.result) {
+      return
+    }
     const shred: Shred = data.params.result;
-
+    
     console.log('interval', now - last_shred_time, 'ms');
     last_shred_time = now;
 
     console.log(shred);
-    process.exit(0);
   } catch (err) {
     console.log(err);
   }
