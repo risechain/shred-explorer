@@ -1,19 +1,31 @@
 {
   "name": "shred-explorer",
   "version": "1.0.0",
-  "description": "A platform for mountain biking enthusiasts to discover trails, track progress, and connect",
+  "description": "Shred Explorer - Blockchain Analytics Platform",
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "cd packages/frontend && npm run dev",
-    "build": "cd packages/frontend && npm run build",
-    "start": "cd packages/frontend && npm run start",
-    "lint": "cd packages/frontend && npm run lint"
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:etl": "cd packages/etl && cargo run",
+    "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:frontend\"",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:api": "pnpm --filter api build",
+    "build:etl": "cd packages/etl && cargo build --release",
+    "build": "pnpm build:api && pnpm build:frontend",
+    "start:frontend": "pnpm --filter frontend start",
+    "start:api": "pnpm --filter api start",
+    "start:etl": "cd packages/etl && cargo run --release",
+    "lint:frontend": "pnpm --filter frontend lint"
   },
-  "keywords": ["mountain biking", "trails", "outdoor", "adventure"],
+  "keywords": [
+    "blockchain",
+    "analytics",
+    "explorer"
+  ],
   "author": "SmoothBot",
   "license": "ISC",
-  "workspaces": [
-    "packages/*"
-  ]
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
 }
