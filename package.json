@@ -1,0 +1,19 @@
+{
+  "name": "shred-explorer",
+  "version": "1.0.0",
+  "description": "A platform for mountain biking enthusiasts to discover trails, track progress, and connect",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "cd packages/frontend && npm run dev",
+    "build": "cd packages/frontend && npm run build",
+    "start": "cd packages/frontend && npm run start",
+    "lint": "cd packages/frontend && npm run lint"
+  },
+  "keywords": ["mountain biking", "trails", "outdoor", "adventure"],
+  "author": "SmoothBot",
+  "license": "ISC",
+  "workspaces": [
+    "packages/*"
+  ]
+}
