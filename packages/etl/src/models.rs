@@ -4,9 +4,56 @@ use tracing::debug;
 
 // Shred data structures
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionSignature {
+    pub r: String,
+    pub s: String,
+    #[serde(rename = "yParity")]
+    pub y_parity: String,
+    pub v: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionDetails {
+    #[serde(rename = "type")]
+    pub tx_type: String,
+    #[serde(rename = "chainId")]
+    pub chain_id: String,
+    pub nonce: String,
+    pub gas: String,
+    #[serde(rename = "maxFeePerGas")]
+    pub max_fee_per_gas: String,
+    #[serde(rename = "maxPriorityFeePerGas")]
+    pub max_priority_fee_per_gas: String,
+    pub to: String,
+    pub value: String,
+    #[serde(rename = "accessList")]
+    pub access_list: Vec<serde_json::Value>,
+    pub input: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionData {
+    pub signature: TransactionSignature,
+    pub transaction: TransactionDetails,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TransactionReceipt {
+    Eip1559 {
+        status: String,
+        #[serde(rename = "cumulativeGasUsed")]
+        cumulative_gas_used: String,
+        logs: Vec<serde_json::Value>,
+    },
+    // Can add other receipt types here if needed
+    Other(serde_json::Value),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
-    pub transaction: serde_json::Value,
-    pub receipt: serde_json::Value,
+    pub transaction: TransactionData,
+    pub receipt: TransactionReceipt,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +89,8 @@ pub struct Block {
     pub block_time: Option<i64>,  // Time in ms from first to last shred
     pub first_shred_timestamp: Option<chrono::DateTime<chrono::Utc>>,
     pub last_shred_timestamp: Option<chrono::DateTime<chrono::Utc>>,
+    pub avg_tps: Option<f64>,     // Average transactions per second
+    pub avg_shred_interval: Option<f64>, // Average time between shreds in milliseconds
     
     // Buffered data to minimize database writes
     pub buffered_shreds: Vec<Shred>,
@@ -63,6 +112,8 @@ impl Block {
             block_time: None,
             first_shred_timestamp: None,
             last_shred_timestamp: None,
+            avg_tps: None,
+            avg_shred_interval: None,
             
             // Initialize buffer storage
             buffered_shreds: Vec::new(),
@@ -118,7 +169,20 @@ impl Block {
         
         // Calculate block time if we have first and last timestamps
         if let (Some(first), Some(last)) = (self.first_shred_timestamp, self.last_shred_timestamp) {
-            self.block_time = Some((last - first).num_milliseconds());
+            let block_time_ms = (last - first).num_milliseconds();
+            self.block_time = Some(block_time_ms);
+            
+            // Calculate average TPS (Transactions Per Second)
+            if block_time_ms > 0 && self.transaction_count > 0 {
+                // Convert block_time from ms to seconds for TPS calculation
+                let block_time_secs = block_time_ms as f64 / 1000.0;
+                self.avg_tps = Some(self.transaction_count as f64 / block_time_secs);
+            }
+            
+            // Calculate average shred interval
+            if self.shred_count > 1 {  // Need at least 2 shreds to have an interval
+                self.avg_shred_interval = Some(block_time_ms as f64 / (self.shred_count - 1) as f64);
+            }
         }
         
         // Buffer this shred for later batch processing
@@ -186,22 +250,5 @@ pub struct JsonRpcError {
     pub message: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SubscriptionRequest {
-    pub method: String,
-    pub params: Vec<String>,
-    pub id: i64,
-    pub jsonrpc: String,
-}
-
-impl SubscriptionRequest {
-    pub fn new_subscription() -> Self {
-        Self {
-            method: "rise_subscribe".to_string(),
-            // Add "shreds" as a parameter for the subscription
-            params: vec!["shreds".to_string()],
-            id: 1,
-            jsonrpc: "2.0".to_string(),
-        }
-    }
-}
+// Subscription request is now handled directly in the processor
+// with the correct format using serde_json::json!()

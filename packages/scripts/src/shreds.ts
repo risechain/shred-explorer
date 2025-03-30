@@ -57,7 +57,7 @@ interface JsonRpcRequest {
 socket.addEventListener("open", (event: Event) => {
   const request: JsonRpcRequest = {
     method: "rise_subscribe",
-    params: [],
+    params: ["shreds"],
     id: 1,
     jsonrpc: "2.0",
   };

@@ -103,6 +103,12 @@ pub async fn save_shreds_batch(pool: &PgPool, shreds: &[Shred]) -> Result<Vec<i6
         
         // Insert transactions
         for transaction in &shred.transactions {
+            // Serialize the structured transaction and receipt data to JSON
+            let transaction_json = serde_json::to_value(&transaction.transaction)
+                .context("Failed to serialize transaction data")?;
+            let receipt_json = serde_json::to_value(&transaction.receipt)
+                .context("Failed to serialize receipt data")?;
+                
             sqlx::query(
                 r#"
                 INSERT INTO transactions (shred_id, transaction_data, receipt_data)
@@ -110,8 +116,8 @@ pub async fn save_shreds_batch(pool: &PgPool, shreds: &[Shred]) -> Result<Vec<i6
                 "#,
             )
             .bind(shred_id)
-            .bind(&transaction.transaction)
-            .bind(&transaction.receipt)
+            .bind(transaction_json)
+            .bind(receipt_json)
             .execute(&mut *tx)
             .await
             .context("Failed to insert transaction record")?;
@@ -170,9 +176,11 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
             state_change_count, 
             first_shred_id, 
             last_shred_id, 
-            block_time
+            block_time,
+            avg_tps,
+            avg_shred_interval
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         "#,
     )
     .bind(block.number)
@@ -183,6 +191,8 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
     .bind(block.first_shred_id)
     .bind(block.last_shred_id)
     .bind(block.block_time)
+    .bind(block.avg_tps)
+    .bind(block.avg_shred_interval)
     .execute(&mut *tx)
     .await;
     
@@ -198,7 +208,7 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
         
         // Log detailed block information to help diagnose
         error!(
-            "Block details: number={}, timestamp={:?}, tx_count={}, shred_count={}, state_changes={}, first_id={:?}, last_id={:?}, block_time={:?}",
+            "Block details: number={}, timestamp={:?}, tx_count={}, shred_count={}, state_changes={}, first_id={:?}, last_id={:?}, block_time={:?}, avg_tps={:?}, avg_shred_interval={:?}",
             block.number,
             block.timestamp,
             block.transaction_count,
@@ -206,7 +216,9 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
             block.state_change_count,
             block.first_shred_id,
             block.last_shred_id,
-            block.block_time
+            block.block_time,
+            block.avg_tps,
+            block.avg_shred_interval
         );
         
         return Err(anyhow::anyhow!("Failed to insert/update block record: {}", e));
@@ -217,12 +229,14 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
         .context("Failed to commit block save transaction")?;
 
     info!(
-        "Saved block {}: shreds={}, tx={}, state_changes={}, time={}ms",
+        "Saved block {}: shreds={}, tx={}, state_changes={}, time={}ms, avg_tps={:.2}, avg_interval={:.2}ms",
         block.number,
         block.shred_count,
         block.transaction_count,
         block.state_change_count,
-        block.block_time.unwrap_or(0)
+        block.block_time.unwrap_or(0),
+        block.avg_tps.unwrap_or(0.0),
+        block.avg_shred_interval.unwrap_or(0.0)
     );
 
     Ok(())
@@ -260,7 +274,7 @@ pub async fn persist_block_with_shreds(pool: &PgPool, block: &mut Block) -> Resu
         Ok(ids) => ids,
         Err(e) => {
             error!("Failed to save {} shreds for block {}: {}", buffered_count, block_number, e);
-            return Err(anyhow::anyhow!("Failed to persist buffered shreds: {}", e));
+            std::process::exit(1); // Terminate the process with error code 1
         }
     };
     

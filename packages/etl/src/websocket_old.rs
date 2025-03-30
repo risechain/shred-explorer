@@ -76,7 +76,7 @@ pub async fn test_websocket_connection(websocket_url: &str) -> Result<()> {
 }
 
 // Global buffer configuration constants
-const MAX_BUFFER_SIZE: usize = 1000;  // Max shreds per block to buffer before writing
+const MAX_BUFFER_SIZE: usize = 2000;  // Max shreds per block to buffer before writing
 const BUFFER_TIME_SECS: i64 = 60;     // Max seconds to buffer before time-based writing
 
 /// Process WebSocket connection
@@ -589,7 +589,7 @@ async fn process_message(
         // Release the lock
         drop(last_time_lock);
         
-        info!(
+        debug!(
             "Received shred: block={}, idx={}, transactions={}, state_changes={}",
             shred.block_number,
             shred.shred_idx,
