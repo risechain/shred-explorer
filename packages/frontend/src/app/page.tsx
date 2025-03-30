@@ -59,12 +59,12 @@ export default function Home() {
 
     const fetchBlocks = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/blocks/latest?limit=10`);
+        const response = await fetch(`${API_BASE_URL}/blocks/latest?limit=50`);
         if (!response.ok) {
           throw new Error('Failed to fetch blocks');
         }
         const data = await response.json();
-        setBlocks(data);
+        setBlocks(data.slice(0, 50));
       } catch (err) {
         console.error('Error fetching blocks:', err);
         setError('Failed to load blocks');
@@ -127,11 +127,11 @@ export default function Home() {
                   block.number === newBlock.number ? newBlock : block
                 );
               } else {
-                return [newBlock, ...prevBlocks].slice(0, 10);
+                return [newBlock, ...prevBlocks].slice(0, 50);
               }
             });
           } else if (message.type === 'latestBlocks') {
-            setBlocks(message.data);
+            setBlocks(message.data.slice(0, 50));
           }
         } catch (err) {
           console.error('Error processing WebSocket message:', err);

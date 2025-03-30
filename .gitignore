@@ -36,3 +36,5 @@ Cargo.lock
 
 # Cornucopia generated files
 packages/etl/src/db/generated/
+
+packages/infrastructure/cdk.out/
