@@ -60,8 +60,9 @@ pub struct Transaction {
 pub struct StateChange {
     pub nonce: i64,
     pub balance: String,
-    pub code: String,
     pub storage: serde_json::Value,
+    #[serde(rename = "new_code")]
+    pub new_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

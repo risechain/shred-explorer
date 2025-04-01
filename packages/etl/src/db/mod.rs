@@ -127,7 +127,7 @@ pub async fn save_shreds_batch(pool: &PgPool, shreds: &[Shred]) -> Result<Vec<i6
         for (address, state_change) in &shred.state_changes {
             sqlx::query(
                 r#"
-                INSERT INTO state_changes (shred_id, address, nonce, balance, code, storage)
+                INSERT INTO state_changes (shred_id, address, nonce, balance, new_code, storage)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
             )
@@ -135,7 +135,7 @@ pub async fn save_shreds_batch(pool: &PgPool, shreds: &[Shred]) -> Result<Vec<i6
             .bind(address)
             .bind(state_change.nonce)
             .bind(&state_change.balance)
-            .bind(&state_change.code)
+            .bind(&state_change.new_code) // Now correctly matches column name
             .bind(&state_change.storage)
             .execute(&mut *tx)
             .await
