@@ -33,10 +33,23 @@ export async function setupDatabaseListener(onBlockChange: (blockNumber: number)
     // Check if pg-listen is available
     let listener;
     try {
-      // Create a pg_listen instance
-      listener = createPgListener({
-        connectionString: process.env.DATABASE_URL,
-      });
+      // Create a pg_listen instance using either DATABASE_URL or individual connection parameters
+      if (process.env.DATABASE_URL) {
+        listener = createPgListener({
+          connectionString: process.env.DATABASE_URL,
+        });
+        console.log('Using DATABASE_URL for pg-listen connection');
+      } else {
+        // Construct connection config from individual parameters
+        listener = createPgListener({
+          host: process.env.DATABASE_HOST || 'localhost',
+          port: parseInt(process.env.DATABASE_PORT || '5432'),
+          database: process.env.DATABASE_NAME,
+          user: process.env.DATABASE_USER,
+          password: process.env.DATABASE_PASSWORD,
+        });
+        console.log('Using individual connection parameters for pg-listen connection');
+      }
 
       // Connect to PostgreSQL
       await listener.connect();
@@ -55,6 +68,7 @@ export async function setupDatabaseListener(onBlockChange: (blockNumber: number)
 
       listener.notifications.on(BLOCK_CREATED_CHANNEL, (payload: any) => {
         const blockNumber = Number(payload.blockNumber);
+        console.log(payload)
         console.log(`Block ${blockNumber} created`);
         onBlockChange(blockNumber);
       });

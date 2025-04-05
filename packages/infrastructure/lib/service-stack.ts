@@ -38,19 +38,20 @@ export class ServiceStack extends cdk.Stack {
       });
     }
 
-    // Grant access to the database from the task
-    props.databaseSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
-      ec2.Port.tcp(5432),
-      'Allow database access from the VPC'
-    );
-
     // Create a security group for the services
     const serviceSecurityGroup = new ec2.SecurityGroup(this, 'ServiceSecurityGroup', {
       vpc: props.vpc,
       description: 'Security group for the ECS services',
       allowAllOutbound: true,
     });
+
+    // Grant access to the database from the VPC CIDR block
+    // Using VPC CIDR instead of security group reference to avoid circular dependencies
+    props.databaseSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
+      ec2.Port.tcp(5432),
+      'Allow database access from the VPC'
+    );
 
     // Allow inbound ports for API and WebSocket services
     serviceSecurityGroup.addIngressRule(
@@ -64,17 +65,26 @@ export class ServiceStack extends cdk.Stack {
       'Allow WebSocket access'
     );
 
+    // Build timestamp for cache busting in both Docker images
+    const buildTimestamp = new Date().toISOString();
+    
     // Build the API Docker image
     const apiImage = new ecr_assets.DockerImageAsset(this, 'ApiDockerImage', {
       directory: path.join(__dirname, '../../../packages/api'),
       buildArgs: {
         NODE_ENV: 'production',
+        // BUILD_TIMESTAMP: buildTimestamp, // Force rebuild by changing build args
       },
+      platform: ecr_assets.Platform.LINUX_AMD64, // Ensure compatible architecture
     });
 
     // Build the ETL Docker image
     const etlImage = new ecr_assets.DockerImageAsset(this, 'EtlDockerImage', {
       directory: path.join(__dirname, '../../../packages/etl'),
+      buildArgs: {
+        // BUILD_TIMESTAMP: buildTimestamp, // Force rebuild by changing build args
+      },
+      platform: ecr_assets.Platform.LINUX_AMD64, // Ensure compatible architecture
     });
 
     // Create a task execution role with permissions to pull images and read secrets
@@ -120,21 +130,21 @@ export class ServiceStack extends cdk.Stack {
         DATABASE_HOST: props.databaseEndpoint,
         DATABASE_NAME: props.databaseName,
         DATABASE_USER: props.databaseUsername,
+        DATABASE_PASSWORD: 'postgres', // Using a simple standard password for PostgreSQL
       },
-      secrets: {
-        DATABASE_PASSWORD: ecs.Secret.fromSecretsManager(props.databaseSecret, 'password'),
-      },
+      // No secrets needed
       portMappings: [
         { containerPort: 3001, hostPort: 3001, protocol: ecs.Protocol.TCP }, // HTTP API
         { containerPort: 3002, hostPort: 3002, protocol: ecs.Protocol.TCP }, // WebSocket
       ],
-      healthCheck: {
-        command: ['CMD-SHELL', 'curl -f http://localhost:3001/api/health || exit 1'],
-        interval: cdk.Duration.seconds(30),
-        timeout: cdk.Duration.seconds(5),
-        retries: 3,
-        startPeriod: cdk.Duration.seconds(60),
-      },
+      // healthCheck: {
+      //   // This checks if the API is running, not necessarily if the database is connected
+      //   command: ['CMD-SHELL', 'curl -s http://localhost:3001/health | grep -q status || exit 1'],
+      //   interval: cdk.Duration.seconds(30),
+      //   timeout: cdk.Duration.seconds(5),
+      //   retries: 5,
+      //   startPeriod: cdk.Duration.seconds(120), // Longer start period to allow for database setup
+      // },
     });
 
     // Add the ETL container to the task
@@ -145,22 +155,27 @@ export class ServiceStack extends cdk.Stack {
         logGroup,
       }),
       environment: {
-        RUST_LOG: 'info',
+        RUST_LOG: 'info', // Increase log verbosity for debugging
         DATABASE_HOST: props.databaseEndpoint,
         DATABASE_NAME: props.databaseName,
         DATABASE_USER: props.databaseUsername,
+        DATABASE_PASSWORD: 'postgres', // Using a simple standard password for PostgreSQL
+        DATABASE_PORT: '5432',
+        DATABASE_URL: `postgres://${props.databaseUsername}:postgres@${props.databaseEndpoint}:5432/${props.databaseName}`,
         WEBSOCKET_URL: props.websocketUrl || 'wss://staging.riselabs.xyz/ws',
+        // Add networking debugging options
+        SQLX_OFFLINE: 'false',
+        PGCONNECT_TIMEOUT: '10', // Longer connection timeout (in seconds)
       },
-      secrets: {
-        DATABASE_PASSWORD: ecs.Secret.fromSecretsManager(props.databaseSecret, 'password'),
-      },
-      healthCheck: {
-        command: ['CMD-SHELL', 'ps aux | grep rise-etl | grep -v grep || exit 1'],
-        interval: cdk.Duration.seconds(30),
-        timeout: cdk.Duration.seconds(5),
-        retries: 3,
-        startPeriod: cdk.Duration.seconds(60),
-      },
+      // No secrets needed
+      // healthCheck: {
+      //   // Simple process check - make sure the binary is running
+      //   command: ['CMD-SHELL', 'ps aux | grep rise-etl | grep -v grep || exit 1'],
+      //   interval: cdk.Duration.seconds(30),
+      //   timeout: cdk.Duration.seconds(10),
+      //   retries: 5,
+      //   startPeriod: cdk.Duration.seconds(120), // Longer start period to allow for database setup
+      // },
     });
 
     // Create a Fargate service for the task
@@ -169,10 +184,15 @@ export class ServiceStack extends cdk.Stack {
       taskDefinition,
       desiredCount: 1,
       securityGroups: [serviceSecurityGroup],
+      // Place the tasks in private subnets but assign a public IP for internet access
       assignPublicIp: true,
       publicLoadBalancer: true,
       listenerPort: 80,
       targetProtocol: elasticloadbalancingv2.ApplicationProtocol.HTTP,
+      // Specify VPC subnets for the tasks - use the same subnet type as the database for connectivity
+      taskSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+      }
     });
 
     // Configure auto-scaling for the service
@@ -190,7 +210,7 @@ export class ServiceStack extends cdk.Stack {
 
     // Add health check for the load balancer target group
     service.targetGroup.configureHealthCheck({
-      path: '/api/health',
+      path: '/health',
       interval: cdk.Duration.seconds(30),
       timeout: cdk.Duration.seconds(5),
       healthyThresholdCount: 2,

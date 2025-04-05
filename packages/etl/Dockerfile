@@ -43,31 +43,24 @@ COPY --from=builder /app/target/release/rise-etl .
 # Copy migrations for schema initialization
 COPY migrations ./migrations/
 
-# Copy .env.example to config directory
+# Create an empty .env file (environment variables will be provided by the container)
+RUN touch /app/.env
+
+# Add all environment files as examples
 COPY .env.example ./
 
 # Add a healthcheck
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD ps aux | grep rise-etl | grep -v grep > /dev/null || exit 1
 
-# Create startup script
-RUN echo '#!/bin/sh\n\
-# Wait for PostgreSQL to be ready\n\
-export PGPASSWORD="${DATABASE_PASSWORD:-password}"\n\
-until pg_isready -h ${DATABASE_HOST:-postgres} -p ${DATABASE_PORT:-5432} -U ${DATABASE_USER:-username}; do\n\
-  echo "Waiting for PostgreSQL to be ready..."\n\
-  sleep 2\n\
-done\n\
-\n\
-# Apply database migrations\n\
-for migration in ./migrations/*.sql; do\n\
-  echo "Applying migration: $migration"\n\
-  psql -h ${DATABASE_HOST:-postgres} -p ${DATABASE_PORT:-5432} -U ${DATABASE_USER:-username} -d ${DATABASE_NAME:-shred_explorer} -f "$migration"\n\
-done\n\
-\n\
-# Start the ETL service\n\
-exec /app/rise-etl\n\
-' > /app/start.sh && chmod +x /app/start.sh
+# Ensure we have execute permissions on the binary
+RUN chmod +x /app/rise-etl
 
-# Set the entrypoint
-ENTRYPOINT ["/app/start.sh"]
+# Create an empty .env file to prevent file not found errors
+RUN echo "# Default environment file" > /app/.env
+
+# Add build timestamp as a label to force rebuilds
+ARG BUILD_TIMESTAMP
+
+# Set the entrypoint directly to the binary
+ENTRYPOINT ["/app/rise-etl", "migrate"]

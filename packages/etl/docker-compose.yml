@@ -18,30 +18,31 @@ services:
       timeout: 5s
       retries: 5
 
+
   # ETL service
-  etl:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: postgres://username:password@postgres:5432/shred_explorer
-      WEBSOCKET_URL: wss://staging.riselabs.xyz/ws
-      RUST_LOG: info
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_USER: username
-      DATABASE_PASSWORD: password
-      DATABASE_NAME: shred_explorer
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "ps aux | grep rise-etl | grep -v grep || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+  # etl:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     DATABASE_URL: postgres://username:password@postgres:5432/shred_explorer
+  #     WEBSOCKET_URL: wss://staging.riselabs.xyz/ws
+  #     RUST_LOG: info
+  #     DATABASE_HOST: postgres
+  #     DATABASE_PORT: 5432
+  #     DATABASE_USER: username
+  #     DATABASE_PASSWORD: password
+  #     DATABASE_NAME: shred_explorer
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "ps aux | grep rise-etl | grep -v grep || exit 1"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 15s
 
 volumes:
   postgres_data:

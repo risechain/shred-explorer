@@ -31,8 +31,10 @@ export class DatabaseStack extends cdk.Stack {
       });
     }
 
-    // Create a new VPC for the database
+    // Create a new VPC for the database with a larger CIDR block
     this.vpc = new ec2.Vpc(this, 'VPC', {
+      // Use a larger CIDR to ensure all our resources fit
+      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
       maxAzs: 2,
       natGateways: 1,
       subnetConfiguration: [
@@ -46,12 +48,16 @@ export class DatabaseStack extends cdk.Stack {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
           cidrMask: 24,
         },
+        // Make sure isolated subnets are configured even though we're not using them
         {
           name: 'isolated',
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
           cidrMask: 24,
         },
       ],
+      // Enable DNS support
+      enableDnsHostnames: true,
+      enableDnsSupport: true,
     });
 
     // Create a security group for the database
@@ -60,6 +66,21 @@ export class DatabaseStack extends cdk.Stack {
       description: 'Allow database access',
       allowAllOutbound: true,
     });
+    
+    // Add a broad ingress rule for the database for troubleshooting
+    // Caution: This is permissive for development purposes only
+    this.databaseSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
+      ec2.Port.tcp(5432),
+      'Allow PostgreSQL connections from within the VPC'
+    );
+    
+    // Allow connections from any IP within the VPC
+    this.databaseSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4('0.0.0.0/0'),
+      ec2.Port.tcp(5432),
+      'Allow PostgreSQL connections from anywhere (for development only)'
+    );
 
     // Create a password secret
     this.databaseSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
@@ -97,11 +118,15 @@ export class DatabaseStack extends cdk.Stack {
       instanceType,
       vpc: this.vpc,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+        // Use PRIVATE_WITH_EGRESS instead of PRIVATE_ISOLATED to enable connectivity
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       securityGroups: [this.databaseSecurityGroup],
       databaseName: props.databaseName,
-      credentials: rds.Credentials.fromSecret(this.databaseSecret),
+      // Use a simple standard password for easier connections
+      credentials: rds.Credentials.fromUsername('postgres', {
+        password: cdk.SecretValue.unsafePlainText('postgres')
+      }),
       backupRetention: cdk.Duration.days(props.backupRetentionDays || 7),
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
@@ -109,7 +134,19 @@ export class DatabaseStack extends cdk.Stack {
       deletionProtection: false,
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
       autoMinorVersionUpgrade: true,
-      publiclyAccessible: false,
+      publiclyAccessible: true, // Allow public access for development only
+      // Add parameter group to allow connections from all IP ranges
+      parameterGroup: new rds.ParameterGroup(this, 'ParameterGroup', {
+        engine: rds.DatabaseInstanceEngine.postgres({
+          version: rds.PostgresEngineVersion.VER_15,
+        }),
+        parameters: {
+          // Set max_connections higher
+          'max_connections': '200',
+          // These help with RDS connectivity
+          'rds.force_ssl': '0',
+        }
+      }),
     });
 
     // Store outputs

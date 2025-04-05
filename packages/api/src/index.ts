@@ -17,8 +17,23 @@ async function main() {
   try {
     console.log('Starting Shred Explorer API Server...');
     
+    // Test database connection
+    try {
+      const client = await pool.connect();
+      console.log('Successfully connected to database');
+      client.release();
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      throw dbError;
+    }
+    
     // Set up database triggers for notifications
-    await setupDatabaseTriggers(pool);
+    try {
+      await setupDatabaseTriggers(pool);
+    } catch (triggerError) {
+      console.error('Failed to set up database triggers, continuing anyway:', triggerError);
+      // Continue execution even if triggers fail - they might already exist or be set up later
+    }
     
     // Start API server
     startApiServer();

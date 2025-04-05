@@ -34,14 +34,11 @@ COPY --from=builder /app/dist ./dist
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:3001/health || exit 1
 
-# Create an entrypoint script
-RUN echo '#!/bin/sh\n\
-# Start the server\n\
-exec node dist/index.js\n\
-' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
-
 # Expose ports
 EXPOSE 3001 3002
 
-# Run the application
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Add build timestamp as a label to force rebuilds
+ARG BUILD_TIMESTAMP
+
+# Run the application directly without a shell script
+ENTRYPOINT ["node", "dist/index.js"]

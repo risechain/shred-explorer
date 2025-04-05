@@ -75,3 +75,30 @@ docker-compose up -d
 This will start:
 1. PostgreSQL database
 2. ETL service connected to the specified WebSocket endpoint
+
+## Deploy with fly
+1. Install the Fly CLI:
+```
+curl -L https://fly.io/install.sh | sh
+```
+2. Login to Fly:
+```
+flyctl auth login
+```
+3. Create a new Fly application:
+```
+flyctl launch
+```
+4. Set the environment variables (DATABASE_URL is set by default):
+```
+fly secrets set WEBSOCKET_URL=wss://staging.riselabs.xyz/ws
+fly secrets set RUST_LOG=info
+```
+5. Deploy the application:
+```
+flyctl deploy
+```
+6. Monitor the logs:
+```
+flyctl logs
+```

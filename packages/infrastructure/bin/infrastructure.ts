@@ -41,9 +41,10 @@ const databaseStack = new DatabaseStack(app, `${prefix}-Database`, {
   tags,
 });
 
-// Create a new ECS cluster with Fargate support
+// Create a new ECS cluster with Fargate support, using the same VPC as the database
 const clusterStack = new ClusterStack(app, `${prefix}-Cluster`, {
   env,
+  existingVpc: databaseStack.vpc, // Use the database VPC for the cluster too
   tags,
 });
 

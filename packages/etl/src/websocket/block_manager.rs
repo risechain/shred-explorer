@@ -223,7 +223,16 @@ impl BlockManager {
         let should_persist_immediately = {
             let blocks = self.active_blocks.lock().await;
             if let Some(block) = blocks.get(&block_number) {
-                block.buffered_count() >= MAX_BUFFER_SIZE
+                let count = block.buffered_count();
+                // info!("Current block {} buffer: {}/{} shreds ({:.1}%)", 
+                //      block_number, count, MAX_BUFFER_SIZE, 
+                //      count as f32 * 100.0 / MAX_BUFFER_SIZE as f32);
+                
+                // Also show queue length
+                let queue_length = self.persist_sender.capacity();
+                // info!("Persistence queue length: {}", queue_length);
+                
+                count >= MAX_BUFFER_SIZE
             } else {
                 false
             }
@@ -260,7 +269,8 @@ impl BlockManager {
         // Send the block to the persistence worker
         match self.persist_sender.send(PersistenceMessage::PersistBlock(block)).await {
             Ok(_) => {
-                debug!("Block {} queued for persistence", block_number);
+                let queue_length = self.persist_sender.capacity();
+                debug!("Block {} queued for persistence (queue length: {})", block_number, queue_length);
                 Ok(())
             },
             Err(e) => {

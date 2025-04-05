@@ -39,14 +39,14 @@ async fn main() -> Result<()> {
     
     // Get and validate configuration from environment variables
     
-    // Check DATABASE_URL
+    // Check DATABASE_URL or construct from individual components
     let database_url = match std::env::var("DATABASE_URL") {
         Ok(url) => {
             println!("Found DATABASE_URL: {}", url);
             url
         },
         Err(_) => {
-            let error = "DATABASE_URL environment variable not set. Create a .env file with DATABASE_URL=postgres://...";
+            let error = "DATABASE_URL env variable not found";
             println!("ERROR: {}", error);
             return Err(anyhow::anyhow!(error));
         }

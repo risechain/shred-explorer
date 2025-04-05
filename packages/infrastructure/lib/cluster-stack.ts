@@ -6,6 +6,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 
 export interface ClusterStackProps extends cdk.StackProps {
   tags?: { [key: string]: string };
+  existingVpc?: ec2.Vpc; // Optional existing VPC to use
 }
 
 export class ClusterStack extends cdk.Stack {
@@ -22,23 +23,30 @@ export class ClusterStack extends cdk.Stack {
       });
     }
 
-    // Create a new VPC for the ECS cluster
-    this.vpc = new ec2.Vpc(this, 'VPC', {
-      maxAzs: 2,
-      natGateways: 1,
-      subnetConfiguration: [
-        {
-          name: 'public',
-          subnetType: ec2.SubnetType.PUBLIC,
-          cidrMask: 24,
-        },
-        {
-          name: 'private',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-          cidrMask: 24,
-        },
-      ],
-    });
+    // Use existing VPC if provided, otherwise create a new one
+    if (props?.existingVpc) {
+      console.log('Using existing VPC for ECS cluster');
+      this.vpc = props.existingVpc;
+    } else {
+      // Create a new VPC for the ECS cluster
+      console.log('Creating new VPC for ECS cluster');
+      this.vpc = new ec2.Vpc(this, 'VPC', {
+        maxAzs: 2,
+        natGateways: 1,
+        subnetConfiguration: [
+          {
+            name: 'public',
+            subnetType: ec2.SubnetType.PUBLIC,
+            cidrMask: 24,
+          },
+          {
+            name: 'private',
+            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+            cidrMask: 24,
+          },
+        ],
+      });
+    }
 
     // Create a log group for the cluster
     const logGroup = new logs.LogGroup(this, 'ClusterLogs', {
