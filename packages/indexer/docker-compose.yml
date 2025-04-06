@@ -1,0 +1,47 @@
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: blocks
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  # Indexer service
+  # indexer:
+  #   build: 
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     DATABASE_URL: "postgresql://username:password@postgres:5432/blocks"
+  #     HTTP_PROVIDER_URL: "https://testnet.riselabs.xyz"  # Example Polygon RPC
+  #     WS_PROVIDER_URL: "wss://testnet.riselabs.xyz/ws"   # Example Polygon WS
+  #     START_BLOCK: 0
+  #     BATCH_SIZE: 1000
+  #     MAX_CONCURRENT_REQUESTS: 10
+  #     RETRY_DELAY: 1000
+  #     MAX_RETRIES: 5
+  #     RPC_BATCH_SIZE: 10
+  #     BLOCK_QUEUE_SIZE: 10000
+  #     DB_WORKERS: 2
+  #     MAX_CONCURRENT_BATCHES: 20
+  #     BLOCKS_FROM_TIP: 5000
+  #     RUST_LOG: "info"
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:

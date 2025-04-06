@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shred Explorer - Mountain Biking Trails and Community",
-  description: "Discover mountain biking trails, track your riding progress, and connect with other riders.",
+  title: "Shred Explorer - Blockchain Explorer",
+  description: "Track blockchain statistics, view blocks and transactions in real-time.",
 };
 
 export default function RootLayout({

@@ -1,0 +1,21 @@
+# fly.toml app configuration file generated for block-indexer on 2025-04-06T22:39:44+10:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'block-indexer'
+primary_region = 'iad'
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  max_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  size = 'performance-1x'

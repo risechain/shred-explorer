@@ -4,6 +4,8 @@ import * as dotenv from 'dotenv';
 import { getBlockDetails, getLatestBlocks } from '../db/listener';
 import { wsMessageSchema } from '../api/schemas';
 import { ZodError } from 'zod';
+import { logger } from '../utils/logger';
+import { statsManager } from '../utils/stats';
 
 dotenv.config();
 
@@ -19,7 +21,11 @@ interface ServerMessage {
 // Create WebSocket server
 export function createWebSocketServer(port: number = Number(process.env.WS_PORT) || 3002) {
   const server = http.createServer();
-  const wss = new WebSocket.Server({ server });
+  
+  // Setup WebSocket server without authentication (open access)
+  const wss = new WebSocket.Server({ 
+    server
+  });
   
   // Connected clients
   const clients = new Set<WebSocket>();
@@ -44,19 +50,34 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
 
   // Handle new WebSocket connections
   wss.on('connection', (ws: WebSocket) => {
-    console.log('Client connected');
+    logger.info('WebSocket client connected');
     clients.add(ws);
 
     // Send initial data - the latest 10 blocks
     getLatestBlocks(10).then(blocks => {
+      logger.debug(`Sending initial ${blocks.length} blocks to new client`);
       sendMessage(ws, {
         type: 'latestBlocks',
         status: 'success',
         data: blocks,
         timestamp: Date.now()
       });
+      
+      // Also send pre-calculated stats
+      const currentStats = statsManager.getStats();
+      if (currentStats) {
+        sendMessage(ws, {
+          type: 'statsUpdate',
+          status: 'success',
+          data: {
+            ...currentStats,
+            windowSize: statsManager.getStatsWindowSize()
+          },
+          timestamp: Date.now()
+        });
+      }
     }).catch(err => {
-      console.error('Error fetching initial blocks:', err);
+      logger.error('Error fetching initial blocks:', err);
       sendError(ws, 'Error fetching initial blocks');
     });
 
@@ -65,6 +86,7 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
       try {
         // Parse and validate the incoming message
         const parsedData = JSON.parse(message);
+        logger.debug(`Received WebSocket message: ${JSON.stringify(parsedData)}`);
         
         try {
           // Validate using Zod schema
@@ -75,6 +97,7 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
             case 'subscribeBlock':
               const blockNumber = validatedMessage.blockNumber || validatedMessage.slot;
               if (blockNumber) {
+                logger.info(`Client subscribed to block ${blockNumber}`);
                 const block = await getBlockDetails(blockNumber);
                 if (block) {
                   sendMessage(ws, {
@@ -84,6 +107,7 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
                     timestamp: Date.now()
                   });
                 } else {
+                  logger.warn(`Block ${blockNumber} not found when client subscribed`);
                   sendError(ws, `Block ${blockNumber} not found`);
                 }
               }
@@ -91,6 +115,7 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
               
             case 'getLatestBlocks':
               const limit = validatedMessage.limit || 10;
+              logger.info(`Client requested latest ${limit} blocks`);
               const latestBlocks = await getLatestBlocks(limit);
               sendMessage(ws, {
                 type: 'latestBlocks',
@@ -99,11 +124,31 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
                 timestamp: Date.now()
               });
               break;
+
+            case 'getStats':
+              logger.info('Client requested current stats');
+              
+              // Get and send the pre-calculated stats
+              const stats = statsManager.getStats();
+              if (stats) {
+                sendMessage(ws, {
+                  type: 'statsUpdate',
+                  status: 'success',
+                  data: {
+                    ...stats,
+                    windowSize: statsManager.getStatsWindowSize()
+                  },
+                  timestamp: Date.now()
+                });
+              } else {
+                sendError(ws, 'No stats available');
+              }
+              break;
               
             case 'subscribe':
               if (validatedMessage.channel === 'blocks') {
                 // Subscribe to all block updates
-                console.log('Client subscribed to all block updates');
+                logger.info('Client subscribed to all block updates');
                 sendMessage(ws, {
                   type: 'subscribed',
                   status: 'success',
@@ -113,7 +158,7 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
                 });
               } else if (validatedMessage.channel === 'block' && validatedMessage.slot) {
                 // Subscribe to specific block updates
-                console.log(`Client subscribed to block ${validatedMessage.slot} updates`);
+                logger.info(`Client subscribed to block ${validatedMessage.slot} updates`);
                 sendMessage(ws, {
                   type: 'subscribed',
                   status: 'success',
@@ -121,15 +166,45 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
                   message: `Subscribed to block ${validatedMessage.slot} updates`,
                   timestamp: Date.now()
                 });
+              } else if (validatedMessage.channel === 'stats') {
+                // Subscribe to stats updates
+                logger.info('Client subscribed to stats updates');
+                
+                sendMessage(ws, {
+                  type: 'subscribed',
+                  status: 'success',
+                  data: { 
+                    channel: 'stats',
+                    windowSize: statsManager.getStatsWindowSize()
+                  },
+                  message: 'Subscribed to stats updates',
+                  timestamp: Date.now()
+                });
+                
+                // Send initial pre-calculated stats
+                const currentStats = statsManager.getStats();
+                if (currentStats) {
+                  sendMessage(ws, {
+                    type: 'statsUpdate',
+                    status: 'success',
+                    data: {
+                      ...currentStats,
+                      windowSize: statsManager.getStatsWindowSize()
+                    },
+                    timestamp: Date.now()
+                  });
+                }
               }
               break;
               
             default:
+              logger.warn(`Client sent unknown message type: ${validatedMessage.type}`);
               sendError(ws, `Unknown message type: ${validatedMessage.type}`);
           }
         } catch (validationError) {
           // Send validation errors back to client
           if (validationError instanceof ZodError) {
+            logger.warn('WebSocket message validation failed:', validationError.errors);
             sendError(ws, 'Validation failed', {
               errors: validationError.errors.map(err => ({
                 path: err.path.join('.'),
@@ -141,14 +216,14 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
           }
         }
       } catch (err) {
-        console.error('Error processing message:', err);
+        logger.error('Error processing WebSocket message:', err);
         sendError(ws, 'Error processing message');
       }
     });
 
     // Handle disconnections
     ws.on('close', () => {
-      console.log('Client disconnected');
+      logger.info('WebSocket client disconnected');
       clients.delete(ws);
     });
   });
@@ -156,27 +231,54 @@ export function createWebSocketServer(port: number = Number(process.env.WS_PORT)
   // Function to broadcast block updates to all connected clients
   const broadcastBlockUpdate = async (blockNumber: number) => {
     const block = await getBlockDetails(blockNumber);
-    if (!block) return;
+    if (!block) {
+      logger.warn(`Failed to broadcast block update: Block ${blockNumber} not found`);
+      return;
+    }
     
-    const message: ServerMessage = {
+    // logger.info(`Broadcasting block ${blockNumber} update to ${clients.size} clients`);
+    
+    // Broadcast block update
+    const blockMessage: ServerMessage = {
       type: 'blockUpdate',
       status: 'success',
       data: block,
       timestamp: Date.now()
     };
     
-    const messageStr = JSON.stringify(message);
+    // Also broadcast updated pre-calculated stats
+    const stats = statsManager.getStats();
+    const statsMessage: ServerMessage = {
+      type: 'statsUpdate',
+      status: 'success',
+      data: stats ? {
+        ...stats,
+        windowSize: statsManager.getStatsWindowSize()
+      } : null,
+      timestamp: Date.now()
+    };
+    
+    const blockMessageStr = JSON.stringify(blockMessage);
+    const statsMessageStr = JSON.stringify(statsMessage);
+    let sentCount = 0;
     
     for (const client of clients) {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(messageStr);
+        // Send both block and stats updates
+        client.send(blockMessageStr);
+        if (stats) {
+          client.send(statsMessageStr);
+        }
+        sentCount++;
       }
     }
+    
+    logger.debug(`Block and stats updates sent to ${sentCount} clients`);
   };
 
   // Start the server
   server.listen(port, () => {
-    console.log(`WebSocket server is running on port ${port}`);
+    logger.info(`WebSocket server is running on port ${port}`);
   });
 
   return {

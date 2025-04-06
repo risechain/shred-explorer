@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
 import { startApiServer } from './api/server';
 import { createWebSocketServer } from './ws/server';
-import { setupDatabaseListener, setupDatabaseTriggers } from './db/listener';
+import { setupDatabaseListener, verifyDatabaseTrigger } from './db/listener';
 import { pool } from './db';
+import { logger } from './utils/logger';
 
 // Check for version flag
 if (process.argv.includes('--version')) {
@@ -15,10 +16,29 @@ dotenv.config();
 
 async function main() {
   try {
-    console.log('Starting Shred Explorer API Server...');
+    logger.info('Starting Shred Explorer API Server...');
     
-    // Set up database triggers for notifications
-    await setupDatabaseTriggers(pool);
+    // Test database connection
+    try {
+      const client = await pool.connect();
+      logger.info('Successfully connected to database');
+      client.release();
+    } catch (dbError) {
+      logger.error('Database connection failed:', dbError);
+      throw dbError;
+    }
+    
+    // Verify database triggers for notifications exist
+    try {
+      const triggerExists = await verifyDatabaseTrigger(pool);
+      if (!triggerExists) {
+        logger.warn('Database notification trigger not found. Real-time updates may not work properly.');
+        logger.info('Please ensure the indexer is running and has created the necessary PostgreSQL triggers.');
+      }
+    } catch (triggerError) {
+      logger.error('Failed to verify database triggers, continuing anyway:', triggerError);
+      // Continue execution even if verification fails
+    }
     
     // Start API server
     startApiServer();
@@ -32,11 +52,11 @@ async function main() {
       await broadcastBlockUpdate(blockNumber);
     });
     
-    console.log('All services started successfully');
+    logger.info('All services started successfully');
     
     // Graceful shutdown
     const shutdown = async () => {
-      console.log('Shutting down...');
+      logger.info('Shutting down...');
       await pool.end();
       process.exit(0);
     };
@@ -44,7 +64,7 @@ async function main() {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
