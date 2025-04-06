@@ -8,6 +8,7 @@ pub struct Config {
     pub http_provider_url: String,
     pub ws_provider_url: String,
     pub start_block: u64,
+    pub blocks_from_tip: Option<u64>,  // NEW: Number of blocks to sync from the latest
     pub batch_size: usize,
     pub max_concurrent_requests: usize,
     pub retry_delay: u64,
@@ -15,6 +16,7 @@ pub struct Config {
     pub rpc_batch_size: usize,
     pub block_queue_size: usize,
     pub db_workers: usize,
+    pub max_concurrent_batches: usize,
 }
 
 impl Config {
@@ -35,6 +37,20 @@ impl Config {
             .unwrap_or_else(|_| "0".to_string())
             .parse()
             .context("START_BLOCK must be a valid number")?;
+            
+        // Parse the optional BLOCKS_FROM_TIP environment variable
+        let blocks_from_tip = match env::var("BLOCKS_FROM_TIP") {
+            Ok(val) => {
+                let parsed_val = val.parse()
+                    .context("BLOCKS_FROM_TIP must be a valid number")?;
+                if parsed_val > 0 {
+                    Some(parsed_val)
+                } else {
+                    None
+                }
+            },
+            Err(_) => None,
+        };
 
         let batch_size = env::var("BATCH_SIZE")
             .unwrap_or_else(|_| "100".to_string())
@@ -70,12 +86,18 @@ impl Config {
             .unwrap_or_else(|_| "2".to_string()) // Default to 2 database worker threads
             .parse()
             .context("DB_WORKERS must be a valid number")?;
+            
+        let max_concurrent_batches = env::var("MAX_CONCURRENT_BATCHES")
+            .unwrap_or_else(|_| "5".to_string()) // Default to 5 concurrent batch fetches
+            .parse()
+            .context("MAX_CONCURRENT_BATCHES must be a valid number")?;
 
         Ok(Config {
             database_url,
             http_provider_url,
             ws_provider_url,
             start_block,
+            blocks_from_tip,
             batch_size,
             max_concurrent_requests,
             retry_delay,
@@ -83,6 +105,7 @@ impl Config {
             rpc_batch_size,
             block_queue_size,
             db_workers,
+            max_concurrent_batches,
         })
     }
 }

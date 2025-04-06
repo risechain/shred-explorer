@@ -1,56 +1,166 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import NumberFlow from '@number-flow/react';
+import { 
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
+  Paper, Card, CardContent, Typography, Box, Grid, Chip,
+  ThemeProvider, createTheme, CssBaseline
+} from '@mui/material';
 
 // Types
 interface Stats {
-  avg_tps: number;
-  avg_shred_interval: number;
-  block_height: number;
-  transactions_per_block: number;
-  last_update: number;
+  tps: number;
+  shredInterval?: number;
+  gasPerSecond: number;
+  windowSize: number;
+  lastUpdate?: number; // For our UI tracking
 }
 
 interface Block {
   number: number;
-  timestamp: string;
+  hash: string;
+  parentHash: string;
+  timestamp: number;
   transactionCount: number;
-  shredCount: number;
-  blockTime: number | null;
-  avgTps: number | null;
+  transactions?: Transaction[];
 }
 
 interface Transaction {
-  id: number;
-  shredId: number;
-  transactionData: any;
-  receiptData: any;
+  hash: string;
+  from?: string;
+  to?: string;
+  value: string;
+  transactionIndex: number;
 }
 
 // API URLs - configure based on environment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081/ws';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002';
+
+// Request headers for API calls - we'll use a proxy rather than sending API key directly
+const API_HEADERS = {
+  'Content-Type': 'application/json'
+};
+
+// Create a theme
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#3f51b5',
+    },
+    secondary: {
+      main: '#f50057',
+    },
+    background: {
+      default: '#f5f5f7', // Light gray background for better contrast
+      paper: '#ffffff',
+    },
+  },
+  typography: {
+    fontFamily: 'var(--font-geist-sans), "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    h3: {
+      fontWeight: 700,
+      fontSize: '1.75rem',
+    },
+    h4: {
+      fontWeight: 600,
+      fontSize: '1.5rem',
+    },
+    h5: {
+      fontWeight: 600,
+      fontSize: '1.25rem',
+    },
+  },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          transition: 'box-shadow 0.3s ease-in-out',
+          '&:hover': {
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+          },
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          padding: '16px 20px',
+          '&:last-child': {
+            paddingBottom: 16,
+          },
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          padding: '12px 16px',
+          borderColor: 'rgba(224, 224, 224, 0.5)',
+        },
+        head: {
+          fontWeight: 600,
+          backgroundColor: 'rgba(0, 0, 0, 0.03)',
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          transition: 'background-color 0.2s ease',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        },
+      },
+    },
+  },
+});
 
 export default function Home() {
   // State hooks
   const [stats, setStats] = useState<Stats | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
+  const [newTransactionCount, setNewTransactionCount] = useState(0);
+  const [latestBlockNumber, setLatestBlockNumber] = useState<number | null>(null);
+  const [animatingTransactionCounts, setAnimatingTransactionCounts] = useState<{[blockNumber: number]: number}>({});
 
   // Fetch initial data
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        console.log(`${API_BASE_URL}/stats`)
-        const response = await fetch(`${API_BASE_URL}/stats`);
+        console.log(`${API_BASE_URL}/stats`);
+        // Use our API proxy endpoint instead of direct connection
+        const response = await fetch('/api/stats');
         if (!response.ok) {
           throw new Error('Failed to fetch stats');
         }
         const data = await response.json();
-        setStats(data);
+        
+        if (data.status === 'success' && data.data) {
+          const statsData: Stats = {
+            ...data.data,
+            lastUpdate: Date.now() // Add current timestamp for our UI
+          };
+          setStats(statsData);
+        } else {
+          throw new Error('Invalid stats data format');
+        }
       } catch (err) {
         console.error('Error fetching stats:', err);
         setError('Failed to load stats');
@@ -59,12 +169,45 @@ export default function Home() {
 
     const fetchBlocks = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/blocks/latest?limit=50`);
+        // Use our API proxy endpoint instead of direct connection
+        const response = await fetch('/api/blocks/latest?limit=10');
         if (!response.ok) {
           throw new Error('Failed to fetch blocks');
         }
         const data = await response.json();
-        setBlocks(data.slice(0, 50));
+        
+        if (data.status === 'success' && data.data && Array.isArray(data.data.blocks)) {
+          // Get latest blocks and ensure each transaction has a transactionIndex
+          let blocks = data.data.blocks.slice(0, 10);
+          blocks = blocks.map(block => {
+            if (block.transactions && block.transactions.length > 0) {
+              const updatedTransactions = block.transactions.map((tx: Transaction, i: number) => ({
+                ...tx,
+                transactionIndex: tx.transactionIndex !== undefined ? tx.transactionIndex : i
+              }));
+              return { ...block, transactions: updatedTransactions };
+            }
+            return block;
+          });
+          
+          
+          // Set the latest block number for animation if there are blocks
+          if (blocks.length > 0) {
+            setLatestBlockNumber(blocks[0].number);
+            
+            // Start animation for this block's transaction count
+            if (blocks[0].transactionCount > 0) {
+              setAnimatingTransactionCounts(prev => ({
+                ...prev,
+                [blocks[0].number]: 0
+              }));
+            }
+          }
+          
+          setBlocks(blocks);
+        } else {
+          throw new Error('Invalid blocks data format');
+        }
       } catch (err) {
         console.error('Error fetching blocks:', err);
         setError('Failed to load blocks');
@@ -86,52 +229,88 @@ export default function Home() {
     let ws: WebSocket | null = null;
     
     const connectWebSocket = () => {
-      ws = new WebSocket(WS_URL);
-      
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-        setWsConnected(true);
+      try {
+        // Create WebSocket connection without authentication
+        console.log(`Connecting to WebSocket: ${WS_URL}`);
+        ws = new WebSocket(WS_URL);
         
-        // Subscribe to block updates
-        ws.send(JSON.stringify({
-          type: 'subscribe',
-          channel: 'blocks'
-        }));
-      };
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          setWsConnected(true);
+          
+          // Subscribe to block updates
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            channel: 'blocks'
+          }));
+          
+          // Also subscribe to stats updates
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            channel: 'stats'
+          }));
+        };
       
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
           
-          if (message.type === 'blockUpdate') {
-            // Update stats
-            setStats(prevStats => {
-              if (!prevStats) return prevStats;
-              
-              return {
-                ...prevStats,
-                block_height: message.data.number,
-                avg_tps: message.data.avgTps || prevStats.avg_tps,
-                avg_shred_interval: message.data.avgShredInterval || prevStats.avg_shred_interval,
-                last_update: message.timestamp
-              };
-            });
-            
+          // Handle block updates
+          if (message.type === 'blockUpdate' && message.status === 'success') {
             // Update blocks list
+            
             setBlocks(prevBlocks => {
               const newBlock = message.data;
+              
+              // Ensure transactions have transactionIndex
+              if (newBlock.transactions) {
+                newBlock.transactions = newBlock.transactions.map((tx: Transaction, i: number) => ({
+                  ...tx,
+                  transactionIndex: tx.transactionIndex !== undefined ? tx.transactionIndex : i
+                }));
+              }
+              
               const exists = prevBlocks.some(block => block.number === newBlock.number);
+              
+              // Update transaction count for new blocks
+              if (!exists && newBlock.transactionCount) {
+                setNewTransactionCount(prev => prev + newBlock.transactionCount);
+              }
               
               if (exists) {
                 return prevBlocks.map(block => 
                   block.number === newBlock.number ? newBlock : block
                 );
               } else {
-                return [newBlock, ...prevBlocks].slice(0, 50);
+                // Set the latest block number for animation
+                setLatestBlockNumber(newBlock.number);
+                
+                // Start animation for this block's transaction count
+                if (newBlock.transactionCount > 0) {
+                  setAnimatingTransactionCounts(prev => ({
+                    ...prev,
+                    [newBlock.number]: 0
+                  }));
+                }
+                
+                return [newBlock, ...prevBlocks].slice(0, 10);
               }
             });
-          } else if (message.type === 'latestBlocks') {
-            setBlocks(message.data.slice(0, 50));
+          } 
+          // Handle stats updates
+          else if (message.type === 'statsUpdate' && message.status === 'success') {
+            setStats(prevStats => {
+              if (!prevStats) return message.data;
+              
+              return {
+                ...message.data,
+                lastUpdate: message.timestamp
+              };
+            });
+          }
+          // Handle initial blocks list
+          else if (message.type === 'latestBlocks' && message.status === 'success') {
+            setBlocks(message.data.slice(0, 10));
           }
         } catch (err) {
           console.error('Error processing WebSocket message:', err);
@@ -145,6 +324,14 @@ export default function Home() {
         // Attempt to reconnect after a delay
         setTimeout(connectWebSocket, 3000);
       };
+      
+      } catch (error) {
+        console.error('WebSocket connection error:', error);
+        setWsConnected(false);
+        
+        // Attempt to reconnect after a delay
+        setTimeout(connectWebSocket, 5000);
+      }
       
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
@@ -162,147 +349,571 @@ export default function Home() {
     };
   }, []);
 
+  // Animation effect for transaction counts
+  useEffect(() => {
+    // Only animate for the latest block
+    if (latestBlockNumber === null) return;
+    
+    // Check if we have any blocks with animating transaction counts
+    const animatingBlocks = Object.keys(animatingTransactionCounts);
+    if (animatingBlocks.length === 0) return;
+    
+    // Set up animation interval
+    const interval = setInterval(() => {
+      setAnimatingTransactionCounts(prev => {
+        const newCounts = { ...prev };
+        let hasActiveAnimations = false;
+        
+        // Update only the latest block
+        for (const blockNumber of animatingBlocks) {
+          const blockNum = parseInt(blockNumber);
+          const block = blocks.find(b => b.number === blockNum);
+          
+          if (!block) continue;
+          
+          // If this is not the latest block anymore, remove it from animation
+          if (blockNum !== latestBlockNumber) {
+            delete newCounts[blockNum];
+            continue;
+          }
+          
+          const currentValue = newCounts[blockNum];
+          const targetValue = block.transactionCount;
+          
+          // If we've reached the target, remove this block from animation
+          if (currentValue >= targetValue) {
+            delete newCounts[blockNum];
+          } else {
+            // Otherwise increment the count (by about 1/20th of the total each time)
+            const increment = Math.max(1, Math.ceil(targetValue / 20));
+            newCounts[blockNum] = Math.min(targetValue, currentValue + increment);
+            hasActiveAnimations = true;
+          }
+        }
+        
+        // If no more animations, clear the interval
+        if (!hasActiveAnimations) {
+          clearInterval(interval);
+          return {};
+        }
+        
+        return newCounts;
+      });
+    }, 50); // Update every 50ms
+    
+    // Cleanup function
+    return () => clearInterval(interval);
+  }, [blocks, animatingTransactionCounts, latestBlockNumber]);
+
   // Format timestamp
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleString();
   };
 
-  // Calculate MGas/s (using TPS as an approximation for now)
+  // Calculate MGas/s from the actual gasPerSecond stat
   const calculateMGasPerSecond = () => {
     if (!stats) return 0;
-    // This is a simplified calculation - in a real app, we would get actual gas usage
-    const avgGasPerTx = 50000; // Example average gas per transaction
-    return ((stats.avg_tps * avgGasPerTx) / 1000000).toFixed(2);
+    // Convert from Gas/s to MGas/s
+    return (stats.gasPerSecond / 1000000).toFixed(2);
   };
 
   // Display loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl font-bold">Loading...</div>
-      </div>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh',
+          backgroundColor: 'background.default'
+        }}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 4,
+              borderRadius: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <Box sx={{ 
+              width: 40, 
+              height: 40, 
+              borderRadius: '50%', 
+              border: '3px solid',
+              borderColor: 'primary.light',
+              borderTopColor: 'primary.main',
+              animation: 'spin 1s linear infinite',
+              '@keyframes spin': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' },
+              }
+            }} />
+            <Typography variant="h6" color="text.primary">
+              Loading RISE Shred Explorer...
+            </Typography>
+          </Paper>
+        </Box>
+      </ThemeProvider>
     );
   }
 
   // Display error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl font-bold text-red-500">{error}</div>
-      </div>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh',
+          backgroundColor: 'background.default'
+        }}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 4,
+              borderRadius: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              backgroundColor: 'error.light',
+              color: 'error.contrastText',
+              fontSize: '2rem'
+            }}>
+              !
+            </Box>
+            <Typography variant="h6" color="error.main" fontWeight="medium">
+              Error
+            </Typography>
+            <Typography variant="body1" color="text.secondary" align="center">
+              {error}
+            </Typography>
+          </Paper>
+        </Box>
+      </ThemeProvider>
     );
   }
 
   return (
-    <div className="min-h-screen p-8 font-[family-name:var(--font-geist-sans)]">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">RISE Explorer</h1>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-          <span className="text-sm text-gray-500">
-            {wsConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
-          </span>
-        </div>
-      </header>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ 
+        minHeight: '100vh', 
+        maxWidth: 1400, 
+        mx: 'auto', 
+        px: { xs: 2, sm: 3, md: 4 },
+        py: 3,
+      }}>
+        <Box component="header" sx={{ mb: 4 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 2,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            pb: 2
+          }}>
+            <Typography variant="h3" color="primary">RISE Shred Explorer</Typography>  
+            <Chip
+              size="small"
+              label={wsConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
+              color={wsConnected ? 'success' : 'error'}
+              variant="outlined"
+              sx={{ height: 24 }}
+            />        
+          </Box>
+      </Box>
 
-      {/* Stats Tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* TPS Tile */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="text-sm text-gray-500 mb-2">TPS</div>
-          <div className="text-3xl font-bold">{stats?.avg_tps.toFixed(2) || '0'}</div>
-        </div>
+     
+      {/* Stats Cards Section */}
+      <Box sx={{ mb: 5 }}>
+        <Typography variant="h5" component="h2" fontWeight="medium" sx={{ mb: 2.5 }}>
+          Network Statistics
+        </Typography>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            flexWrap: { xs: 'nowrap', sm: 'wrap' },
+            gap: 2
+          }}
+        >
+          {/* TPS Tile */}
+          <Box sx={{ 
+            width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)', lg: 'calc(20% - 13px)' },
+            display: 'flex'
+          }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                height: '100%'
+              }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  TPS
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ mt: 1 }}>
+                  <NumberFlow trend={0} value={stats?.tps || 0} />
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
 
-        {/* MGas/s Tile */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="text-sm text-gray-500 mb-2">MGas/s</div>
-          <div className="text-3xl font-bold">{calculateMGasPerSecond()}</div>
-        </div>
+          {/* MGas/s Tile */}
+          <Box sx={{ 
+            width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)', lg: 'calc(20% - 13px)' },
+            display: 'flex'
+          }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                height: '100%'
+              }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  MGas/s
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ mt: 1 }}>
+                  <NumberFlow format={{ notation: 'compact' }} value={stats ? stats.gasPerSecond / 1000000 : 0} />
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
 
-        {/* Block Height Tile */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="text-sm text-gray-500 mb-2">Block Height</div>
-          <div className="text-3xl font-bold">{stats?.block_height.toLocaleString() || '0'}</div>
-        </div>
+          {/* Latest Block Tile */}
+          <Box sx={{ 
+            width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)', lg: 'calc(20% - 13px)' },
+            display: 'flex'
+          }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                height: '100%'
+              }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Latest Block
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ mt: 1 }}>
+                  <NumberFlow trend={0} value={blocks.length > 0 ? blocks[0].number : 0} />
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
 
-        {/* ShredTime Tile */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="text-sm text-gray-500 mb-2">Shred Time (ms)</div>
-          <div className="text-3xl font-bold">{stats?.avg_shred_interval.toFixed(2) || '0'}</div>
-        </div>
-      </div>
+          {/* ShredTime Tile */}
+          <Box sx={{ 
+            width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)', lg: 'calc(20% - 13px)' },
+            display: 'flex'
+          }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                height: '100%'
+              }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Shred Interval
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ mt: 1 }}>
+                  {stats?.shredInterval 
+                    ? <><NumberFlow value={stats.shredInterval * 1000} /> ms</> 
+                    : 'N/A'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
+          
+          {/* New Transactions Tile */}
+          <Box sx={{ 
+            width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)', lg: 'calc(20% - 13px)' },
+            display: 'flex'
+          }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                height: '100%'
+              }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  New Transactions
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ mt: 1 }}>
+                  <NumberFlow trend={-1} value={newTransactionCount} />
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+      </Box>
 
       {/* Tables Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Blocks Table */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Latest Blocks</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-700">
-                  <th className="px-4 py-2 text-left">Number</th>
-                  <th className="px-4 py-2 text-left">Time</th>
-                  <th className="px-4 py-2 text-left">Transactions</th>
-                  <th className="px-4 py-2 text-left">Shreds</th>
-                </tr>
-              </thead>
-              <tbody>
-                {blocks.map((block) => (
-                  <tr key={block.number} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-4 py-2 font-medium">{block.number}</td>
-                    <td className="px-4 py-2">{formatTimestamp(block.timestamp)}</td>
-                    <td className="px-4 py-2">{block.transactionCount}</td>
-                    <td className="px-4 py-2">{block.shredCount}</td>
-                  </tr>
-                ))}
-                {blocks.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-2 text-center">No blocks available</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <Box sx={{ mb: 5 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          mb: 3,
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: { xs: 2, lg: 0 }
+        }}>
+          <Typography variant="h5" component="h2" fontWeight="medium">
+            Explorer Data
+          </Typography>
+        </Box>
+        
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: 3,
+          height: '100%' 
+        }}>
+          {/* Blocks Table */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Card sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden'
+            }}>
+              <Box sx={{ 
+                px: 3, 
+                py: 2, 
+                borderBottom: 1, 
+                borderColor: 'divider',
+                bgcolor: 'background.paper', 
+              }}>
+                <Typography variant="h6" fontWeight="medium">
+                  Latest Blocks
+                </Typography>
+              </Box>
+              
+              <TableContainer sx={{ 
+                flexGrow: 1, 
+                display: 'flex', 
+                flexDirection: 'column',
+                height: '100%',
+                width: '100%'
+              }}>
+                <Table size="medium" stickyHeader sx={{ width: '100%', tableLayout: 'fixed' }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell width="20%">Number</TableCell>
+                      <TableCell width="35%">Time</TableCell>
+                      <TableCell width="30%">Hash</TableCell>
+                      <TableCell width="15%" align="right">Txns</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {blocks.map((block) => (
+                      <TableRow key={block.number}>
+                        <TableCell>
+                          <Typography
+                            component="a"
+                            href={`https://explorer.testnet.riselabs.xyz/block/${block.number}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ 
+                              color: 'primary.main', 
+                              fontWeight: 500,
+                              textDecoration: 'none', 
+                              '&:hover': { textDecoration: 'underline' } 
+                            }}
+                          >
+                            {block.number}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{formatTimestamp(block.timestamp)}</TableCell>
+                        <TableCell>
+                          <Typography 
+                            sx={{ 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.85rem',
+                              color: 'text.secondary',
+                              display: 'inline-block',
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {block.hash.substring(0, 14)}...
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Box 
+                            sx={{ 
+                              fontWeight: block.number === latestBlockNumber ? 600 : 400,
+                              color: block.number === latestBlockNumber ? 'primary.main' : 'inherit',
+                            }}
+                          >
+                            {animatingTransactionCounts[block.number] !== undefined ? 
+                              animatingTransactionCounts[block.number] : block.transactionCount}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {blocks.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">No blocks available</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Card>
+          </Box>
 
-        {/* Transactions Table */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Latest Transactions</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-700">
-                  <th className="px-4 py-2 text-left">Transaction Hash</th>
-                  <th className="px-4 py-2 text-left">Block</th>
-                  <th className="px-4 py-2 text-left">From</th>
-                  <th className="px-4 py-2 text-left">To</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.length > 0 ? (
-                  transactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="px-4 py-2 font-medium">{tx.transactionData?.hash?.substring(0, 10) || '0x...'}</td>
-                      <td className="px-4 py-2">{tx.transactionData?.blockNumber || 'N/A'}</td>
-                      <td className="px-4 py-2">{tx.transactionData?.from?.substring(0, 10) || '0x...'}</td>
-                      <td className="px-4 py-2">{tx.transactionData?.to?.substring(0, 10) || '0x...'}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-2 text-center">No transactions available</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+          {/* Latest Transactions Table */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Card sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden'
+            }}>
+              <Box sx={{ 
+                px: 3, 
+                py: 2, 
+                borderBottom: 1, 
+                borderColor: 'divider',
+                bgcolor: 'background.paper', 
+              }}>
+                <Typography variant="h6" fontWeight="medium">
+                  Latest Transactions
+                </Typography>
+              </Box>
+              
+              <TableContainer sx={{ 
+                flexGrow: 1, 
+                display: 'flex', 
+                flexDirection: 'column',
+                height: '100%',
+                width: '100%'
+              }}>
+                <Table size="medium" stickyHeader sx={{ width: '100%', tableLayout: 'fixed' }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell width="35%">Hash</TableCell>
+                      <TableCell width="20%">Block</TableCell>
+                      <TableCell width="15%" align="center">Index</TableCell>
+                      <TableCell width="30%" align="right">Value</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(() => {
+                      // Collect transactions from all blocks
+                      const allTransactions: Array<{tx: Transaction, blockNumber: number}> = [];
+                      
+                      // Go through each block and collect its transactions
+                      blocks.forEach(block => {
+                        // reverse the order of transactions to match the latest block first
+                        if (block.transactions && block.transactions.length > 0) {
+                          block.transactions.reverse();
+                        }
 
-      <footer className="mt-16 text-center text-sm text-gray-500">
-        <p>© {new Date().getFullYear()} RISE Explorer</p>
-      </footer>
-    </div>
+                        if (block.transactions && block.transactions.length > 0) {
+                          block.transactions.forEach((tx, i, txs) => {
+                            allTransactions.push({
+                              tx: {
+                                ...tx,
+                                transactionIndex: tx.transactionIndex !== undefined ? tx.transactionIndex : txs.length -i
+                              },
+                              blockNumber: block.number
+                            });
+                          });
+                        }
+                      });
+                      
+                      // Display up to 10 transactions
+                      if (allTransactions.length > 0) {
+                        return allTransactions.slice(0, 10).map(({tx, blockNumber}) => (
+                          <TableRow key={tx.hash}>
+                            <TableCell>
+                              <Typography
+                                component="a"
+                                href={`https://explorer.testnet.riselabs.xyz/tx/${tx.hash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{ 
+                                  fontFamily: 'monospace', 
+                                  fontSize: '0.85rem', 
+                                  color: 'primary.main', 
+                                  textDecoration: 'none', 
+                                  '&:hover': { textDecoration: 'underline' },
+                                  display: 'inline-block',
+                                  maxWidth: '100%',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {tx.hash.substring(0, 14) || '0x...'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography
+                                component="a"
+                                href={`https://explorer.testnet.riselabs.xyz/block/${blockNumber}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{ 
+                                  color: 'primary.main', 
+                                  textDecoration: 'none', 
+                                  '&:hover': { textDecoration: 'underline' } 
+                                }}
+                              >
+                                {blockNumber}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">{tx.transactionIndex !== undefined ? tx.transactionIndex : 'N/A'}</TableCell>
+                            <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
+                              {(parseInt(tx.value) / 1e18).toFixed(4)} ETH
+                            </TableCell>
+                          </TableRow>
+                        ));
+                      } else {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={4} align="center">No transactions available</TableCell>
+                          </TableRow>
+                        );
+                      }
+                    })()}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Card>
+          </Box>
+        </Box>
+      </Box>
+
+      <Box component="footer" sx={{ mt: 8, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          © {new Date().getFullYear()} RISE Shred Explorer
+        </Typography>
+      </Box>
+    </Box>
+    </ThemeProvider>
   );
 }

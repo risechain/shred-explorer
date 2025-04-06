@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL database
   postgres:
@@ -17,32 +15,33 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-
-  # ETL service
-  # etl:
-  #   build:
+  
+  # Indexer service
+  # indexer:
+  #   build: 
   #     context: .
   #     dockerfile: Dockerfile
   #   environment:
-  #     DATABASE_URL: postgres://username:password@postgres:5432/shred_explorer
-  #     WEBSOCKET_URL: wss://staging.riselabs.xyz/ws
-  #     RUST_LOG: info
-  #     DATABASE_HOST: postgres
-  #     DATABASE_PORT: 5432
-  #     DATABASE_USER: username
-  #     DATABASE_PASSWORD: password
-  #     DATABASE_NAME: shred_explorer
+  #     DATABASE_URL: "postgresql://username:password@postgres:5432/blocks"
+  #     HTTP_PROVIDER_URL: "https://testnet.riselabs.xyz"  # Example Polygon RPC
+  #     WS_PROVIDER_URL: "wss://testnet.riselabs.xyz/ws"   # Example Polygon WS
+  #     START_BLOCK: 0
+  #     BATCH_SIZE: 1000
+  #     MAX_CONCURRENT_REQUESTS: 10
+  #     RETRY_DELAY: 1000
+  #     MAX_RETRIES: 5
+  #     RPC_BATCH_SIZE: 10
+  #     BLOCK_QUEUE_SIZE: 10000
+  #     DB_WORKERS: 2
+  #     MAX_CONCURRENT_BATCHES: 20
+  #     BLOCKS_FROM_TIP: 5000
+  #     RUST_LOG: "info"
+  #   ports:
+  #     - "8080:8080"
   #   depends_on:
   #     postgres:
   #       condition: service_healthy
-  #   restart: always
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "ps aux | grep rise-etl | grep -v grep || exit 1"]
-  #     interval: 30s
-  #     timeout: 5s
-  #     retries: 3
-  #     start_period: 15s
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:

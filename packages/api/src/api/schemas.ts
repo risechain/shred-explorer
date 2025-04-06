@@ -31,10 +31,36 @@ export const paginationSchema = z.object({
   })
 });
 
+// Schema for block response
+export const blockResponseSchema = z.object({
+  number: z.number(),
+  hash: z.string(),
+  parentHash: z.string(),
+  timestamp: z.number(),
+  transactionCount: z.number(),
+  transactions: z.array(
+    z.object({
+      hash: z.string(),
+      from: z.string().optional(),
+      to: z.string().optional(),
+      value: z.string(),
+      transactionIndex: z.number(),
+    })
+  ).optional()
+});
+
+// Schema for stats response
+export const statsResponseSchema = z.object({
+  tps: z.number(),
+  shredInterval: z.number().optional(),
+  gasPerSecond: z.number(),
+  windowSize: z.number().optional()
+});
+
 // Schema for WebSocket message validation
 export const wsMessageSchema = z.object({
-  type: z.enum(['subscribe', 'subscribeBlock', 'getLatestBlocks']),
-  channel: z.enum(['blocks', 'block']).optional(),
+  type: z.enum(['subscribe', 'subscribeBlock', 'getLatestBlocks', 'getStats']),
+  channel: z.enum(['blocks', 'block', 'stats']).optional(),
   blockNumber: z.number().int().positive().optional(),
   slot: z.number().int().positive().optional(),
   limit: z.number().int().positive().max(100).optional()

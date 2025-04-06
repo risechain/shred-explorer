@@ -1,4 +1,3 @@
-use tracing::Level;
 use tracing_subscriber::{fmt, EnvFilter};
 
 pub fn init_logger() {

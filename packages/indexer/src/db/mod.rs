@@ -35,10 +35,12 @@ impl Database {
         blocks::get_latest_block_number(&self.pool).await
     }
     
+    #[allow(dead_code)]
     pub async fn get_block_by_number(&self, block_number: u64) -> Result<Option<crate::models::Block>> {
         blocks::get_block_by_number(&self.pool, block_number).await
     }
     
+    #[allow(dead_code)]
     pub async fn get_block_by_hash(&self, block_hash: &str) -> Result<Option<crate::models::Block>> {
         blocks::get_block_by_hash(&self.pool, block_hash).await
     }

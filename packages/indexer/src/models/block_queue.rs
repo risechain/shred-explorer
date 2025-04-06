@@ -5,7 +5,7 @@ use tokio::sync::{Mutex, Semaphore};
 use tracing::{debug, error, info, warn};
 
 /// Maximum number of blocks that can be in the queue
-const DEFAULT_MAX_QUEUE_SIZE: usize = 1000;
+const _DEFAULT_MAX_QUEUE_SIZE: usize = 1000; // Kept for future use
 
 /// Block queue for decoupling fetching from database persistence
 pub struct BlockQueue {
@@ -19,8 +19,9 @@ pub struct BlockQueue {
 
 impl BlockQueue {
     /// Create a new block queue with the default max size
+    #[allow(dead_code)]
     pub fn new() -> Self {
-        Self::with_capacity(DEFAULT_MAX_QUEUE_SIZE)
+        Self::with_capacity(_DEFAULT_MAX_QUEUE_SIZE)
     }
 
     /// Create a new block queue with a specific capacity
@@ -59,11 +60,7 @@ impl BlockQueue {
         
         // Log queue status periodically
         let current_size = self.len();
-        if current_size % 100 == 0 || current_size >= self.max_size - 10 {
-            info!("Block queue size: {}/{}", current_size, self.max_size);
-        } else {
-            debug!("Block queue size: {}/{}", current_size, self.max_size);
-        }
+        debug!("Block queue size: {}/{}", current_size, self.max_size);
 
         // When the permit is dropped, it's automatically released
         std::mem::forget(permit);
@@ -78,11 +75,7 @@ impl BlockQueue {
                 
                 // Log queue status periodically
                 let current_size = self.len();
-                if current_size % 100 == 0 || current_size >= self.max_size - 10 {
-                    info!("Block queue size: {}/{}", current_size, self.max_size);
-                } else {
-                    debug!("Block queue size: {}/{}", current_size, self.max_size);
-                }
+                debug!("Block queue size: {}/{}", current_size, self.max_size);
                 
                 std::mem::forget(permit);
                 true
@@ -161,6 +154,7 @@ impl BlockProcessor {
     }
 
     /// Pause the processor
+    #[allow(dead_code)]
     pub async fn pause(&self) -> bool {
         let mut status = self.status.lock().await;
         if *status == ProcessorStatus::Running {
@@ -174,6 +168,7 @@ impl BlockProcessor {
     }
 
     /// Resume the processor
+    #[allow(dead_code)]
     pub async fn resume(&self) -> bool {
         let mut status = self.status.lock().await;
         if *status == ProcessorStatus::Paused {
@@ -187,6 +182,7 @@ impl BlockProcessor {
     }
 
     /// Stop the processor
+    #[allow(dead_code)]
     pub async fn stop(&self) -> bool {
         let mut status = self.status.lock().await;
         if *status != ProcessorStatus::Stopped {
@@ -200,6 +196,7 @@ impl BlockProcessor {
     }
 
     /// Get current processor status
+    #[allow(dead_code)]
     pub async fn status(&self) -> ProcessorStatus {
         *self.status.lock().await
     }
@@ -231,15 +228,38 @@ impl BlockProcessor {
                         
                         // Process the block
                         let block_number = block.number; // Store block number for error reporting
+                        // Try saving the block, with special handling for transaction serialization errors
                         match db.save_block(&block).await {
                             Ok(_) => {
                                 debug!("Saved block {} to database", block_number);
                             }
                             Err(e) => {
-                                error!("Failed to save block {} to database: {}", block_number, e);
-                                // Re-push failed blocks to the queue
-                                if !queue.try_push(block) {
-                                    error!("Could not requeue block {} due to full queue", block_number);
+                                // Check for transaction serialization errors
+                                let error_str = e.to_string();
+                                if error_str.contains("could not access status of transaction") {
+                                    error!("Transaction serialization error for block {}: {}", block_number, e);
+                                    
+                                    // Create a version of the block with empty transactions as a fallback
+                                    let mut fixed_block = block.clone();
+                                    fixed_block.transactions = Vec::new();
+                                    
+                                    // Try to save the block without transactions
+                                    match db.save_block(&fixed_block).await {
+                                        Ok(_) => {
+                                            warn!("Saved block {} with empty transactions as a fallback", block_number);
+                                        }
+                                        Err(retry_err) => {
+                                            error!("Failed to save block {} even with empty transactions: {}", 
+                                                block_number, retry_err);
+                                            // Don't requeue at this point - it's likely a fundamental issue
+                                        }
+                                    }
+                                } else {
+                                    error!("Failed to save block {} to database: {}", block_number, e);
+                                    // Re-push failed blocks to the queue for non-serialization errors
+                                    if !queue.try_push(block) {
+                                        error!("Could not requeue block {} due to full queue", block_number);
+                                    }
                                 }
                             }
                         }
@@ -263,12 +283,34 @@ impl BlockProcessor {
         info!("Processing remaining blocks before shutdown");
         while let Some(block) = queue.try_pop() {
             let block_number = block.number; // Store block number for error reporting
+            // Use the same error handling approach as in the main worker
             match db.save_block(&block).await {
                 Ok(_) => {
                     debug!("Saved block {} to database", block_number);
                 }
                 Err(e) => {
-                    error!("Failed to save block {} to database: {}", block_number, e);
+                    // Check for transaction serialization errors
+                    let error_str = e.to_string();
+                    if error_str.contains("could not access status of transaction") {
+                        error!("Transaction serialization error for block {}: {}", block_number, e);
+                        
+                        // Create a version of the block with empty transactions as a fallback
+                        let mut fixed_block = block.clone();
+                        fixed_block.transactions = Vec::new();
+                        
+                        // Try to save the block without transactions
+                        match db.save_block(&fixed_block).await {
+                            Ok(_) => {
+                                warn!("Saved block {} with empty transactions as a fallback", block_number);
+                            }
+                            Err(retry_err) => {
+                                error!("Failed to save block {} even with empty transactions: {}", 
+                                    block_number, retry_err);
+                            }
+                        }
+                    } else {
+                        error!("Failed to save block {} to database: {}", block_number, e);
+                    }
                 }
             }
         }

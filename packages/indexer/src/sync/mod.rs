@@ -2,11 +2,13 @@ mod error;
 mod historic;
 mod live;
 mod manager;
+mod fetcher;
 
 pub use error::SyncError;
 pub use historic::HistoricSync;
 pub use live::LiveSync;
 pub use manager::SyncManager;
+pub use fetcher::BlockFetcher;
 
 use std::fmt;
 use std::sync::Arc;

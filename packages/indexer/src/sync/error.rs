@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)] // Some variants not used yet but kept for future use
 pub enum SyncError {
     #[error("Provider error: {0}")]
     Provider(String),

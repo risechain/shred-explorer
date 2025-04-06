@@ -16,17 +16,23 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
         .map(|td| td.to_string())
         .unwrap_or_default();
     
-    // Serialize transactions to JSON
-    let transactions_json = serde_json::to_value(&block.transactions)
-        .context("Failed to serialize transactions to JSON")?;
+    // Serialize transactions to JSON with additional error handling
+    let transactions_json = match serde_json::to_value(&block.transactions) {
+        Ok(json) => json,
+        Err(e) => {
+            error!("Failed to serialize transactions for block {}: {}", block.number, e);
+            // Create an empty array as fallback
+            serde_json::Value::Array(Vec::new())
+        }
+    };
     
     // Upsert query to handle potential re-orgs
     let query = r#"
     INSERT INTO blocks (
         number, hash, parent_hash, timestamp, transactions_root,
         state_root, receipts_root, gas_used, gas_limit, base_fee_per_gas,
-        extra_data, miner, difficulty, total_difficulty, size, transactions
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        extra_data, miner, difficulty, total_difficulty, size, transaction_count, transactions
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     ON CONFLICT (number) DO UPDATE SET
         hash = EXCLUDED.hash,
         parent_hash = EXCLUDED.parent_hash,
@@ -42,6 +48,7 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
         difficulty = EXCLUDED.difficulty,
         total_difficulty = EXCLUDED.total_difficulty,
         size = EXCLUDED.size,
+        transaction_count = EXCLUDED.transaction_count, 
         transactions = EXCLUDED.transactions,
         updated_at = CURRENT_TIMESTAMP
     "#;
@@ -62,6 +69,7 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
         .bind(&difficulty)
         .bind(&total_difficulty)
         .bind(block.size as i64)
+        .bind(block.transaction_count as i64)
         .bind(transactions_json)
         .execute(pool)
         .await;
@@ -82,6 +90,7 @@ pub async fn save_block(pool: &PgPool, block: &Block) -> Result<()> {
 pub async fn get_latest_block_number(pool: &PgPool) -> Result<Option<u64>> {
     debug!("Fetching latest block number from database");
     
+    // Use the optimized index for faster MAX lookup
     let query = "SELECT MAX(number) as latest FROM blocks";
     
     let result = sqlx::query(query)
@@ -102,6 +111,74 @@ pub async fn get_latest_block_number(pool: &PgPool) -> Result<Option<u64>> {
         },
         Err(e) => {
             error!("Failed to get latest block number: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+#[instrument(skip(pool))]
+pub async fn get_head_block(pool: &PgPool) -> Result<Option<crate::models::Block>> {
+    debug!("Fetching head block from database");
+    
+    // Use the optimized index for this query - ORDER BY number DESC LIMIT 1 is efficient with our index
+    let query = "SELECT * FROM blocks ORDER BY number DESC LIMIT 1";
+    
+    let result = sqlx::query_as::<_, BlockRow>(query)
+        .fetch_optional(pool)
+        .await;
+    
+    match result {
+        Ok(row) => {
+            let block = row.map(|r| r.into_block())
+                .transpose()?;
+            match &block {
+                Some(b) => debug!("Head block found: {}", b.number),
+                None => debug!("No blocks found in database"),
+            }
+            Ok(block)
+        },
+        Err(e) => {
+            error!("Failed to get head block: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+#[instrument(skip(pool))]
+pub async fn get_blocks_paginated(
+    pool: &PgPool, 
+    offset: u64, 
+    limit: u64, 
+    descending: bool
+) -> Result<Vec<crate::models::Block>> {
+    debug!("Fetching paginated blocks with offset {} and limit {}", offset, limit);
+    
+    // Use the optimized index for efficient pagination
+    let query = if descending {
+        "SELECT * FROM blocks ORDER BY number DESC LIMIT $1 OFFSET $2"
+    } else {
+        "SELECT * FROM blocks ORDER BY number ASC LIMIT $1 OFFSET $2"
+    };
+    
+    let result = sqlx::query_as::<_, BlockRow>(query)
+        .bind(limit as i64)
+        .bind(offset as i64)
+        .fetch_all(pool)
+        .await;
+    
+    match result {
+        Ok(rows) => {
+            let blocks: Result<Vec<_>> = rows.into_iter()
+                .map(|row| row.into_block())
+                .collect();
+            
+            let blocks = blocks?;
+            debug!("Fetched {} blocks", blocks.len());
+            
+            Ok(blocks)
+        },
+        Err(e) => {
+            error!("Failed to get paginated blocks: {}", e);
             Err(e.into())
         }
     }
@@ -165,6 +242,7 @@ pub async fn get_block_by_hash(pool: &PgPool, block_hash: &str) -> Result<Option
 
 // Helper struct for database queries
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 struct BlockRow {
     number: i64,
     hash: String,
@@ -181,9 +259,11 @@ struct BlockRow {
     difficulty: String,
     total_difficulty: Option<String>,
     size: i64,
+    transaction_count: i64,
     transactions: Json<Vec<crate::models::Transaction>>,
 }
 
+#[allow(dead_code)]
 impl BlockRow {
     fn into_block(self) -> Result<Block> {
         use ethers::types::U256;
@@ -218,6 +298,7 @@ impl BlockRow {
             difficulty,
             total_difficulty,
             size: self.size as u64,
+            transaction_count: self.transaction_count as u64,
             transactions: self.transactions.0,
         })
     }

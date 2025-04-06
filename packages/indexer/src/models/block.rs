@@ -19,10 +19,12 @@ pub struct Block {
     pub total_difficulty: Option<U256>,
     pub size: u64,
     pub transactions: Vec<Transaction>,
+    pub transaction_count: u64,
 }
 
 impl Block {
     // Helper to create a dummy block for testing
+    #[allow(dead_code)]
     pub fn dummy(number: u64) -> Self {
         Self {
             number,
@@ -41,6 +43,7 @@ impl Block {
             total_difficulty: Some(U256::from(100)),
             size: 1000,
             transactions: vec![],
+            transaction_count: 0,
         }
     }
 }
@@ -79,4 +82,5 @@ pub struct BlockHeader {
     pub total_difficulty: Option<U256>,
     pub size: u64,
     pub transactions: Vec<String>, // Just transaction hashes
+    pub transaction_count: u64,
 }

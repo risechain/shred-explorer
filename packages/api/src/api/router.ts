@@ -1,9 +1,11 @@
 import express from 'express';
 import { db } from '../db';
-import { blocks, shreds } from '../db/schema';
-import { desc, eq, sql } from 'drizzle-orm';
+import { blocks, BlockStats } from '../db/schema';
+import { desc, eq, sql, count } from 'drizzle-orm';
 import { validate } from './middleware/validate';
 import { blockNumberSchema, paginationSchema } from './schemas';
+import { logger } from '../utils/logger';
+import { statsManager } from '../utils/stats';
 
 const router = express.Router();
 
@@ -12,18 +14,41 @@ router.get('/blocks/latest',
   validate(paginationSchema, 'query'),
   async (req, res) => {
     try {
-      const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 0;
-      const offset = typeof req.query.offset === 'string' ? Number(req.query.offset) : 0;
+      const limit = req.query.limit as number;
+      const offset = req.query.offset as number;
       
-      const latestBlocks = await db.select()
+      logger.info(`Fetching latest blocks with limit ${limit} and offset ${offset}`);
+      
+      // Get total block count
+      const [{ value: total }] = await db
+        .select({ value: count() })
+        .from(blocks);
+      
+      // Get latest blocks
+      const latestBlocks = await db.select({
+        number: blocks.number,
+        hash: blocks.hash,
+        parentHash: blocks.parentHash,
+        timestamp: blocks.timestamp,
+        transactionCount: blocks.transactionCount,
+        transactions: blocks.transactions,
+      })
         .from(blocks)
         .orderBy(desc(blocks.number))
         .limit(limit)
         .offset(offset);
         
-      res.json(latestBlocks);
+      logger.info(`Found ${latestBlocks.length} blocks`);
+      
+      res.json({
+        status: 'success',
+        data: {
+          blocks: latestBlocks,
+          total
+        }
+      });
     } catch (error) {
-      console.error('Error fetching latest blocks:', error);
+      logger.error('Error fetching latest blocks:', error);
       res.status(500).json({ 
         status: 'error',
         message: 'Internal server error' 
@@ -39,55 +64,31 @@ router.get('/blocks/:number',
     try {
       const blockNumber = req.params.number as unknown as number;
       
+      logger.info(`Fetching block ${blockNumber}`);
+      
       const blockData = await db.select()
         .from(blocks)
         .where(eq(blocks.number, blockNumber))
         .limit(1);
         
       if (blockData.length === 0) {
+        logger.warn(`Block ${blockNumber} not found`);
         return res.status(404).json({ 
           status: 'error',
           message: 'Block not found' 
         });
       }
       
-      res.json({
-        status: 'success',
-        data: blockData[0]
-      });
-    } catch (error) {
-      console.error('Error fetching block:', error);
-      res.status(500).json({ 
-        status: 'error',
-        message: 'Internal server error' 
-      });
-    }
-  }
-);
-
-// Get shreds for a block
-router.get('/blocks/:number/shreds', 
-  validate(blockNumberSchema, 'params'),
-  validate(paginationSchema, 'query'),
-  async (req, res) => {
-    try {
-      const blockNumber = req.params.number as unknown as number;
-      const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 0;
-      const offset = typeof req.query.offset === 'string' ? Number(req.query.offset) : 0;
+      logger.info(`Successfully retrieved block ${blockNumber}`);
       
-      const shredData = await db.select()
-        .from(shreds)
-        .where(eq(shreds.blockNumber, blockNumber))
-        .orderBy(shreds.shredIdx)
-        .limit(limit)
-        .offset(offset);
-        
       res.json({
         status: 'success',
-        data: shredData
+        data: {
+          block: blockData[0]
+        }
       });
     } catch (error) {
-      console.error('Error fetching shreds:', error);
+      logger.error(`Error fetching block ${req.params.number}:`, error);
       res.status(500).json({ 
         status: 'error',
         message: 'Internal server error' 
@@ -99,34 +100,31 @@ router.get('/blocks/:number/shreds',
 // Get statistics
 router.get('/stats', async (req, res) => {
   try {
-    // Get the latest block data
-    const latestBlockQuery = await db.select({
-      number: blocks.number,
-      timestamp: blocks.timestamp,
-      shredCount: blocks.shredCount,
-      transactionCount: blocks.transactionCount,
-      avgTps: blocks.avgTps,
-      avgShredInterval: blocks.avgShredInterval
-    })
-    .from(blocks)
-    .orderBy(desc(blocks.number))
-    .limit(1);
+    logger.info('Fetching chain statistics');
     
-    const latestBlock = latestBlockQuery.length > 0 ? latestBlockQuery[0] : null;
+    // Get pre-calculated stats from our stats manager
+    const stats = statsManager.getStats();
     
-    // Prepare the result in the requested format
-    const result = {
-      last_update: latestBlock ? new Date(latestBlock.timestamp).getTime() : 0, // timestamp in milliseconds
-      block_height: latestBlock ? latestBlock.number : 0,
-      shreds_per_block: latestBlock ? latestBlock.shredCount : 0,
-      transactions_per_block: latestBlock ? latestBlock.transactionCount : 0,
-      avg_tps: latestBlock ? latestBlock.avgTps || 0 : 0,
-      avg_shred_interval: latestBlock ? latestBlock.avgShredInterval || 0 : 0
-    };
+    if (!stats) {
+      logger.warn('No stats available');
+      return res.status(404).json({
+        status: 'error',
+        message: 'No blocks found to calculate statistics'
+      });
+    }
     
-    res.json(result);
+    logger.info('Successfully retrieved chain statistics');
+    
+    // Include fixed window size in the response
+    res.json({
+      status: 'success',
+      data: {
+        ...stats,
+        windowSize: statsManager.getStatsWindowSize()
+      }
+    });
   } catch (error) {
-    console.error('Error fetching statistics:', error);
+    logger.error('Error fetching statistics:', error);
     res.status(500).json({ 
       status: 'error',
       message: 'Internal server error' 
