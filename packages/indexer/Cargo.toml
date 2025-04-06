@@ -1,0 +1,38 @@
+[package]
+name = "ethereum-indexer"
+version = "0.1.0"
+edition = "2021"
+description = "An Ethereum blockchain indexer using ethers-rs"
+
+[dependencies]
+# Ethers for Ethereum interactions
+ethers = { version = "2.0.13", features = ["ws", "rustls"] }
+
+# Async runtime
+tokio = { version = "1.36.0", features = ["full", "sync"] }
+futures = "0.3.30"
+crossbeam-queue = "0.3.11"  # For bounded MPMC queue implementation
+
+# Database
+sqlx = { version = "0.7.3", features = ["runtime-tokio-rustls", "postgres", "json", "chrono"] }
+
+# Logging
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0.56"
+anyhow = "1.0.80"
+
+# Configuration
+config = "0.13.4"
+dotenv = "0.15.0"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+
+# Utilities
+chrono = { version = "0.4.34", features = ["serde"] }
+async-trait = "0.1.77"
+tokio-util = "0.7.10"
+hex = "0.4.3"
+rand = "0.8.5" # For simulating failures in demo code
