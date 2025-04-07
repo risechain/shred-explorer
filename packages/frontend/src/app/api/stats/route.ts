@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Get the backend API URL from environment variables
@@ -7,11 +9,17 @@ export async function GET() {
     const apiKey = process.env.API_SECRET_KEY;
     
     // Make the request to the backend API
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+    });
+    
+    // Only add API key if it exists
+    if (apiKey) {
+      headers.append('x-api-key', apiKey);
+    }
+    
     const response = await fetch(`${apiUrl}/stats`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-      },
+      headers,
       // Important for real-time data
       cache: 'no-store'
     });

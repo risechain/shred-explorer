@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Get query parameters
@@ -12,11 +14,17 @@ export async function GET(request: NextRequest) {
     const apiKey = process.env.API_SECRET_KEY;
     
     // Make the request to the backend API
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+    });
+    
+    // Only add API key if it exists
+    if (apiKey) {
+      headers.append('x-api-key', apiKey);
+    }
+    
     const response = await fetch(`${apiUrl}/blocks/latest?limit=${limit}&offset=${offset}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-      },
+      headers,
       // Important for real-time data
       cache: 'no-store'
     });
