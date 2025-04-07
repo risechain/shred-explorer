@@ -26,16 +26,9 @@ export const blocks = pgTable('blocks', {
 // Types for transactions in the jsonb field
 export interface TransactionJson {
   hash: string;
+  value: string;
   from?: string;
   to?: string;
-  value: string;
-  gas: number;
-  gasPrice?: number;
-  input: string;
-  nonce: number;
-  transactionIndex: number;
-  blockHash: string;
-  blockNumber: number;
 }
 
 // Export types for use in the application
