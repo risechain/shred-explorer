@@ -61,6 +61,34 @@ The indexer creates the following PostgreSQL table:
 
 - `blocks`: Stores block data including transactions as JSONB
 
+## Deploy with fly
+To deploy the indexer on Fly.io, follow these steps:
+1. Install the Fly CLI: https://fly.io/docs/getting-started/installing-flyctl/
+2. Login to Fly: `flyctl auth login`
+3. Create a new Fly app: `flyctl launch --name <app-name> --image <docker-image>`
+4. Set the environment variables using `flyctl secrets set` command:
+   ```
+   flyctl secrets set DATABASE_URL=<your-database-url>
+   flyctl secrets set HTTP_PROVIDER_URL=<your-http-provider-url>
+   flyctl secrets set WS_PROVIDER_URL=<your-ws-provider-url>
+   flyctl secrets set START_BLOCK=<start-block-number>
+   flyctl secrets set BATCH_SIZE=<batch-size>
+   flyctl secrets set MAX_CONCURRENT_REQUESTS=<max-concurrent-requests>
+   flyctl secrets set RETRY_DELAY=<retry-delay>
+   flyctl secrets set MAX_RETRIES=<max-retries>
+   ```
+5. Deploy the app: `flyctl deploy`
+
+## Tunnel to Fly DB
+`
+fly proxy 5432 -a indexer-db2
+`
+
+## SSH into Fly DB
+```
+fly ssh console -a indexer-db2
+```
+
 ## Architecture
 
 The application consists of several components:

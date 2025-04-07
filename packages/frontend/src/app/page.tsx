@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  Paper, Card, CardContent, Typography, Box, Grid, Chip,
+  Paper, Card, CardContent, Typography, Box, Chip,
   ThemeProvider, createTheme, CssBaseline
 } from '@mui/material';
 
@@ -38,10 +38,7 @@ interface Transaction {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002';
 
-// Request headers for API calls - we'll use a proxy rather than sending API key directly
-const API_HEADERS = {
-  'Content-Type': 'application/json'
-};
+// API headers configuration is handled in proxy endpoints
 
 // Create a theme
 const theme = createTheme({
@@ -179,7 +176,7 @@ export default function Home() {
         if (data.status === 'success' && data.data && Array.isArray(data.data.blocks)) {
           // Get latest blocks and ensure each transaction has a transactionIndex
           let blocks = data.data.blocks.slice(0, 10);
-          blocks = blocks.map(block => {
+          blocks = blocks.map((block: Block) => {
             if (block.transactions && block.transactions.length > 0) {
               const updatedTransactions = block.transactions.map((tx: Transaction, i: number) => ({
                 ...tx,
@@ -239,21 +236,24 @@ export default function Home() {
           setWsConnected(true);
           
           // Subscribe to block updates
-          ws.send(JSON.stringify({
-            type: 'subscribe',
-            channel: 'blocks'
-          }));
-          
-          // Also subscribe to stats updates
-          ws.send(JSON.stringify({
-            type: 'subscribe',
-            channel: 'stats'
-          }));
+          if (ws) {
+            ws.send(JSON.stringify({
+              type: 'subscribe',
+              channel: 'blocks'
+            }));
+            
+            // Also subscribe to stats updates
+            ws.send(JSON.stringify({
+              type: 'subscribe',
+              channel: 'stats'
+            }));
+          }
         };
       
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
+      if (ws) {
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
           
           // Handle block updates
           if (message.type === 'blockUpdate' && message.status === 'success') {
@@ -315,15 +315,18 @@ export default function Home() {
         } catch (err) {
           console.error('Error processing WebSocket message:', err);
         }
-      };
+        };
+      }
       
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setWsConnected(false);
-        
-        // Attempt to reconnect after a delay
-        setTimeout(connectWebSocket, 3000);
-      };
+      if (ws) {
+        ws.onclose = () => {
+          console.log('WebSocket disconnected');
+          setWsConnected(false);
+          
+          // Attempt to reconnect after a delay
+          setTimeout(connectWebSocket, 3000);
+        };
+      }
       
       } catch (error) {
         console.error('WebSocket connection error:', error);
@@ -333,10 +336,12 @@ export default function Home() {
         setTimeout(connectWebSocket, 5000);
       }
       
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        ws?.close();
-      };
+      if (ws) {
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          ws?.close();
+        };
+      }
     };
     
     connectWebSocket();
@@ -410,12 +415,6 @@ export default function Home() {
     return new Date(timestamp * 1000).toLocaleString();
   };
 
-  // Calculate MGas/s from the actual gasPerSecond stat
-  const calculateMGasPerSecond = () => {
-    if (!stats) return 0;
-    // Convert from Gas/s to MGas/s
-    return (stats.gasPerSecond / 1000000).toFixed(2);
-  };
 
   // Display loading state
   if (loading) {
