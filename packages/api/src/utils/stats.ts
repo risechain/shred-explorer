@@ -78,8 +78,8 @@ class StatsManager {
       const blockTimeSeconds = 12; // Assuming average block time
       this.cachedStats = {
         tps: Number((latestBlock.transactionCount / blockTimeSeconds).toFixed(2)),
-        gasPerSecond: Number((latestBlock.gasUsed / blockTimeSeconds).toFixed(2)),
-        shredInterval: 1 / (latestBlock.transactionCount || 1), // Avoid division by zero
+        gasPerSecond: Number((latestBlock.gasUsed / blockTimeSeconds).toFixed(4)),
+        shredInterval: Number((1 / (latestBlock.transactionCount || 1)).toFixed(2)), // Avoid division by zero
       };
       this.statsNeedRecalculation = false;
       return;

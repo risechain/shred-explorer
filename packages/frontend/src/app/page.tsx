@@ -712,7 +712,7 @@ export default function Home() {
                   MGas/s
                 </Typography>
                 <Typography variant="h4" component="div" sx={{ mt: 1 }}>
-                  <NumberFlow format={{ notation: 'compact' }} value={stats ? stats.gasPerSecond / 1000000 : 0} />
+                  <NumberFlow value={stats ? Number((stats.gasPerSecond / 1000000).toFixed(1)) : 0} />
                 </Typography>
               </CardContent>
             </Card>
