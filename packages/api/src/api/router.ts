@@ -14,7 +14,9 @@ router.get('/blocks/latest',
   validate(paginationSchema, 'query'),
   async (req, res) => {
     try {
+      // @ts-ignore
       const limit = req.query.limit as number;
+      // @ts-ignore
       const offset = req.query.offset as number;
       
       logger.info(`Fetching latest blocks with limit ${limit} and offset ${offset}`);

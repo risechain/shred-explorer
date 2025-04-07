@@ -1,0 +1,63 @@
+# fly.toml app configuration file generated for block-indexer-api on 2025-04-07T12:13:58+10:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'block-indexer-api'
+primary_region = 'iad'
+
+[build]
+
+# [http_service]
+#   internal_port = 3001
+#   force_https = true
+#   auto_stop_machines = 'stop'
+#   auto_start_machines = true
+#   min_machines_running = 1
+#   max_machines_running = 1
+#   processes = ['app']
+  
+[[services]]
+  internal_port = 3001
+  protocol = "tcp"
+#   auto_stop_machines = 'stop'
+#   auto_start_machines = true
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["http", "tls"]
+
+  [services.tcp_checks]
+    interval = "15s"
+    timeout = "2s"
+
+[[services]]
+  internal_port = 3002
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    port = 3002
+    handlers = ["tls"]
+
+  [services.tcp_checks]
+    interval = "15s"
+    timeout = "2s"
+
+[[vm]]
+  memory = '4gb'
+  cpu_kind = 'shared'
+  cpus = 4
