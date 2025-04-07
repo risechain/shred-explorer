@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import NumberFlow from '@number-flow/react';
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
@@ -125,6 +125,95 @@ const theme = createTheme({
     },
   },
 });
+
+// Helper function to generate transaction rows - separated from the component render process
+// to avoid React hooks rules violations (can't use hooks conditionally)
+function getTransactionRows(blocks: Block[]) {
+  // Process and collect transactions from all blocks
+  const allTransactions: Array<{tx: Transaction, blockNumber: number}> = [];
+  
+  // Iterate once through all blocks
+  for (const block of blocks) {
+    if (!block.transactions || block.transactions.length === 0) continue;
+    
+    // Don't modify the original transactions array, create a new one
+    const reversedTxs = [...block.transactions].reverse();
+    
+    for (let i = 0; i < reversedTxs.length; i++) {
+      const tx = reversedTxs[i];
+      allTransactions.push({
+        tx: {
+          ...tx,
+          // Preserve the transaction index if it exists
+          transactionIndex: tx.transactionIndex !== undefined ? 
+            tx.transactionIndex : (reversedTxs.length - i)
+        },
+        blockNumber: block.number
+      });
+      
+      // Only collect up to 10 transactions total
+      if (allTransactions.length >= 10) break;
+    }
+    
+    // Early exit if we already have 10 transactions
+    if (allTransactions.length >= 10) break;
+  }
+  
+  // Display transactions
+  if (allTransactions.length > 0) {
+    return allTransactions.map(({tx, blockNumber}) => (
+      <TableRow key={`${blockNumber}-${tx.hash}`}>
+        <TableCell>
+          <Typography
+            component="a"
+            href={`https://explorer.testnet.riselabs.xyz/tx/${tx.hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ 
+              fontFamily: 'monospace', 
+              fontSize: '0.85rem', 
+              color: 'primary.main', 
+              textDecoration: 'none', 
+              '&:hover': { textDecoration: 'underline' },
+              display: 'inline-block',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {tx.hash.substring(0, 14) || '0x...'}
+          </Typography>
+        </TableCell>
+        <TableCell>
+          <Typography
+            component="a"
+            href={`https://explorer.testnet.riselabs.xyz/block/${blockNumber}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ 
+              color: 'primary.main', 
+              textDecoration: 'none', 
+              '&:hover': { textDecoration: 'underline' } 
+            }}
+          >
+            {blockNumber}
+          </Typography>
+        </TableCell>
+        <TableCell align="center">{tx.transactionIndex !== undefined ? tx.transactionIndex : 'N/A'}</TableCell>
+        <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
+          {(parseInt(tx.value || '0') / 1e18).toFixed(4)} ETH
+        </TableCell>
+      </TableRow>
+    ));
+  } else {
+    return (
+      <TableRow>
+        <TableCell colSpan={4} align="center">No transactions available</TableCell>
+      </TableRow>
+    );
+  }
+}
 
 export default function Home() {
   // State hooks
@@ -255,66 +344,94 @@ export default function Home() {
           try {
             const message = JSON.parse(event.data);
           
-          // Handle block updates
-          if (message.type === 'blockUpdate' && message.status === 'success') {
-            // Update blocks list
-            
-            setBlocks(prevBlocks => {
+            // Handle block updates
+            if (message.type === 'blockUpdate' && message.status === 'success') {
+              // Create a shallow copy of the block data
               const newBlock = message.data;
               
               // Ensure transactions have transactionIndex
-              if (newBlock.transactions) {
+              if (newBlock.transactions && newBlock.transactions.length > 0) {
                 newBlock.transactions = newBlock.transactions.map((tx: Transaction, i: number) => ({
                   ...tx,
                   transactionIndex: tx.transactionIndex !== undefined ? tx.transactionIndex : i
                 }));
               }
               
-              const exists = prevBlocks.some(block => block.number === newBlock.number);
-              
-              // Update transaction count for new blocks
-              if (!exists && newBlock.transactionCount) {
-                setNewTransactionCount(prev => prev + newBlock.transactionCount);
-              }
-              
-              if (exists) {
-                return prevBlocks.map(block => 
-                  block.number === newBlock.number ? newBlock : block
-                );
-              } else {
-                // Set the latest block number for animation
-                setLatestBlockNumber(newBlock.number);
+              // Update blocks list
+              setBlocks(prevBlocks => {
+                const exists = prevBlocks.some(block => block.number === newBlock.number);
                 
-                // Start animation for this block's transaction count
-                if (newBlock.transactionCount > 0) {
-                  setAnimatingTransactionCounts(prev => ({
-                    ...prev,
-                    [newBlock.number]: 0
-                  }));
+                // Update transaction count for new blocks
+                if (!exists && newBlock.transactionCount) {
+                  setNewTransactionCount(prev => prev + newBlock.transactionCount);
                 }
                 
-                return [newBlock, ...prevBlocks].slice(0, 10);
-              }
-            });
-          } 
-          // Handle stats updates
-          else if (message.type === 'statsUpdate' && message.status === 'success') {
-            setStats(prevStats => {
-              if (!prevStats) return message.data;
+                if (exists) {
+                  return prevBlocks.map(block => 
+                    block.number === newBlock.number ? newBlock : block
+                  );
+                } else {
+                  // Set the latest block number for animation
+                  setLatestBlockNumber(newBlock.number);
+                  
+                  // Start animation for this block's transaction count
+                  if (newBlock.transactionCount > 0) {
+                    setAnimatingTransactionCounts(prev => ({
+                      ...prev,
+                      [newBlock.number]: 0
+                    }));
+                  }
+                  
+                  return [newBlock, ...prevBlocks].slice(0, 10);
+                }
+              });
+            } 
+            // Handle stats updates
+            else if (message.type === 'statsUpdate' && message.status === 'success') {
+              setStats(prevStats => {
+                if (!prevStats) return message.data;
+                
+                return {
+                  ...message.data,
+                  lastUpdate: message.timestamp
+                };
+              });
+            }
+            // Handle initial blocks list
+            else if (message.type === 'latestBlocks' && message.status === 'success') {
+              // Process transactions properly
+              const processedBlocks = message.data.slice(0, 10).map((block: Block) => {
+                if (block.transactions && block.transactions.length > 0) {
+                  return {
+                    ...block,
+                    transactions: block.transactions.map((tx: Transaction, i: number) => ({
+                      ...tx,
+                      transactionIndex: tx.transactionIndex !== undefined ? tx.transactionIndex : i
+                    }))
+                  };
+                }
+                return block;
+              });
               
-              return {
-                ...message.data,
-                lastUpdate: message.timestamp
-              };
-            });
+              // Set blocks and the latest block number for animation
+              setBlocks(processedBlocks);
+              
+              // Set latest block number if there are blocks
+              if (processedBlocks.length > 0) {
+                setLatestBlockNumber(processedBlocks[0].number);
+                
+                // Start animation for this block's transaction count
+                if (processedBlocks[0].transactionCount > 0) {
+                  setAnimatingTransactionCounts(prev => ({
+                    ...prev,
+                    [processedBlocks[0].number]: 0
+                  }));
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error processing WebSocket message:', err);
           }
-          // Handle initial blocks list
-          else if (message.type === 'latestBlocks' && message.status === 'success') {
-            setBlocks(message.data.slice(0, 10));
-          }
-        } catch (err) {
-          console.error('Error processing WebSocket message:', err);
-        }
         };
       }
       
@@ -389,8 +506,11 @@ export default function Home() {
           if (currentValue >= targetValue) {
             delete newCounts[blockNum];
           } else {
-            // Otherwise increment the count (by about 1/20th of the total each time)
-            const increment = Math.max(1, Math.ceil(targetValue / 20));
+            // Use logarithmic delay function for smoother animation
+            const progress = currentValue / targetValue;
+            const factor = Math.log(1 + (1 - progress) * 98) / Math.log(100); 
+            console.log({factor})
+            const increment = Math.max(1, Math.ceil(targetValue * factor / 20));
             newCounts[blockNum] = Math.min(targetValue, currentValue + increment);
             hasActiveAnimations = true;
           }
@@ -820,85 +940,8 @@ export default function Home() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {(() => {
-                      // Collect transactions from all blocks
-                      const allTransactions: Array<{tx: Transaction, blockNumber: number}> = [];
-                      
-                      // Go through each block and collect its transactions
-                      blocks.forEach(block => {
-                        // reverse the order of transactions to match the latest block first
-                        if (block.transactions && block.transactions.length > 0) {
-                          block.transactions.reverse();
-                        }
-
-                        if (block.transactions && block.transactions.length > 0) {
-                          block.transactions.forEach((tx, i, txs) => {
-                            allTransactions.push({
-                              tx: {
-                                ...tx,
-                                transactionIndex: tx.transactionIndex !== undefined ? tx.transactionIndex : txs.length -i
-                              },
-                              blockNumber: block.number
-                            });
-                          });
-                        }
-                      });
-                      
-                      // Display up to 10 transactions
-                      if (allTransactions.length > 0) {
-                        return allTransactions.slice(0, 10).map(({tx, blockNumber}) => (
-                          <TableRow key={tx.hash}>
-                            <TableCell>
-                              <Typography
-                                component="a"
-                                href={`https://explorer.testnet.riselabs.xyz/tx/${tx.hash}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{ 
-                                  fontFamily: 'monospace', 
-                                  fontSize: '0.85rem', 
-                                  color: 'primary.main', 
-                                  textDecoration: 'none', 
-                                  '&:hover': { textDecoration: 'underline' },
-                                  display: 'inline-block',
-                                  maxWidth: '100%',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}
-                              >
-                                {tx.hash.substring(0, 14) || '0x...'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography
-                                component="a"
-                                href={`https://explorer.testnet.riselabs.xyz/block/${blockNumber}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{ 
-                                  color: 'primary.main', 
-                                  textDecoration: 'none', 
-                                  '&:hover': { textDecoration: 'underline' } 
-                                }}
-                              >
-                                {blockNumber}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="center">{tx.transactionIndex !== undefined ? tx.transactionIndex : 'N/A'}</TableCell>
-                            <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
-                              {(parseInt(tx.value) / 1e18).toFixed(4)} ETH
-                            </TableCell>
-                          </TableRow>
-                        ));
-                      } else {
-                        return (
-                          <TableRow>
-                            <TableCell colSpan={4} align="center">No transactions available</TableCell>
-                          </TableRow>
-                        );
-                      }
-                    })()}
+                    {/* Move useMemo hook outside of the render function */}
+                    {getTransactionRows(blocks)}
                   </TableBody>
                 </Table>
               </TableContainer>
