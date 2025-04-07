@@ -223,8 +223,30 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [newTransactionCount, setNewTransactionCount] = useState(0);
+  const [totalTransactions, setTotalTransactions] = useState<number | null>(null);
   const [latestBlockNumber, setLatestBlockNumber] = useState<number | null>(null);
   const [animatingTransactionCounts, setAnimatingTransactionCounts] = useState<{[blockNumber: number]: number}>({});
+
+  // Fetch total transactions from external API
+  const fetchTotalTransactions = async () => {
+    try {
+      const response = await fetch('https://explorer.testnet.riselabs.xyz/api/v2/stats');
+      if (!response.ok) {
+        console.error('Failed to fetch total transactions from external API');
+        return;
+      }
+      
+      const data = await response.json();
+      console.log(data)
+      if (data && typeof data.total_transactions === 'string') {
+        setTotalTransactions(Number(data.total_transactions));
+      } else {
+        console.warn('External API response does not include totalTransactions field', data);
+      }
+    } catch (err) {
+      console.error('Error fetching total transactions:', err);
+    }
+  };
 
   // Fetch initial data
   useEffect(() => {
@@ -303,11 +325,18 @@ export default function Home() {
     // Fetch initial data
     const fetchInitialData = async () => {
       setLoading(true);
-      await Promise.all([fetchStats(), fetchBlocks()]);
+      await Promise.all([fetchStats(), fetchBlocks(), fetchTotalTransactions()]);
       setLoading(false);
     };
 
     fetchInitialData();
+    
+    // Set up periodic refresh for total transactions
+    const intervalId = setInterval(fetchTotalTransactions, 60000); // Refresh every minute
+    
+    return () => {
+      clearInterval(intervalId);
+    };
   }, []);
 
   // WebSocket connection
@@ -364,6 +393,11 @@ export default function Home() {
                 // Update transaction count for new blocks
                 if (!exists && newBlock.transactionCount) {
                   setNewTransactionCount(prev => prev + newBlock.transactionCount);
+                  
+                  // Occasionally refresh the total transactions count when new blocks arrive
+                  if (Math.random() < 0.2) { // 20% chance to refresh on each new block
+                    fetchTotalTransactions();
+                  }
                 }
                 
                 if (exists) {
@@ -509,7 +543,6 @@ export default function Home() {
             // Use logarithmic delay function for smoother animation
             const progress = currentValue / targetValue;
             const factor = Math.log(1 + (1 - progress) * 98) / Math.log(100); 
-            console.log({factor})
             const increment = Math.max(1, Math.ceil(targetValue * factor / 20));
             newCounts[blockNum] = Math.min(targetValue, currentValue + increment);
             hasActiveAnimations = true;
@@ -764,7 +797,7 @@ export default function Home() {
             </Card>
           </Box>
           
-          {/* New Transactions Tile */}
+          {/* Transactions Tile */}
           <Box sx={{ 
             width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)', lg: 'calc(20% - 13px)' },
             display: 'flex'
@@ -777,11 +810,25 @@ export default function Home() {
                 height: '100%'
               }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  New Transactions
+                  Total Transactions
                 </Typography>
-                <Typography variant="h4" component="div" sx={{ mt: 1 }}>
-                  <NumberFlow trend={-1} value={newTransactionCount} />
-                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="h4" component="div">
+                    <NumberFlow 
+                      trend={1} 
+                      value={totalTransactions !== null ? 
+                        totalTransactions + newTransactionCount : 
+                        newTransactionCount
+                      } 
+                      format={{ notation: 'compact' }}
+                    />
+                  </Typography>
+                  {totalTransactions !== null && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
+                      +{newTransactionCount.toLocaleString()} new
+                    </Typography>
+                  )}
+                </Box>
               </CardContent>
             </Card>
           </Box>
