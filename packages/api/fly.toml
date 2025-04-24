@@ -24,8 +24,8 @@ primary_region = 'iad'
 #   auto_start_machines = true
 
   [services.concurrency]
-    hard_limit = 25
-    soft_limit = 20
+    hard_limit = 1000
+    soft_limit = 950
     type = "connections"
 
   [[services.ports]]
@@ -45,8 +45,8 @@ primary_region = 'iad'
   protocol = "tcp"
 
   [services.concurrency]
-    hard_limit = 25
-    soft_limit = 20
+    hard_limit = 1000
+    soft_limit = 950
     type = "connections"
 
   [[services.ports]]

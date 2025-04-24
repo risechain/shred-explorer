@@ -1,6 +1,6 @@
-# Shred Explorer
+# RISE Chain Testnet: Shred Explorer
 
-Blockchain explorer and analytics platform for tracking and visualizing blockchain data.
+Blockchain explorer and analytics platform for tracking and visualizing RISE Testnet data.
 
 ## Project Structure
 

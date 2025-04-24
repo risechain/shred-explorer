@@ -819,8 +819,7 @@ export default function Home() {
                       value={totalTransactions !== null ? 
                         totalTransactions + newTransactionCount : 
                         newTransactionCount
-                      } 
-                      format={{ notation: 'compact' }}
+                      }
                     />
                   </Typography>
                   {totalTransactions !== null && (
