@@ -6,12 +6,14 @@ import { validate } from './middleware/validate';
 import { blockNumberSchema, paginationSchema } from './schemas';
 import { logger } from '../utils/logger';
 import { statsManager } from '../utils/stats';
+import { cacheMiddleware } from '../utils/cache';
 
 const router = express.Router();
 
 // Get latest blocks
 router.get('/blocks/latest', 
   validate(paginationSchema, 'query'),
+  cacheMiddleware(),
   async (req, res) => {
     try {
       // @ts-ignore
@@ -62,6 +64,7 @@ router.get('/blocks/latest',
 // Get block by number
 router.get('/blocks/:number', 
   validate(blockNumberSchema, 'params'),
+  cacheMiddleware(),
   async (req, res) => {
     try {
       const blockNumber = req.params.number as unknown as number;
@@ -100,7 +103,7 @@ router.get('/blocks/:number',
 );
 
 // Get statistics
-router.get('/stats', async (req, res) => {
+router.get('/stats', cacheMiddleware(), async (req, res) => {
   try {
     logger.info('Fetching chain statistics');
     
