@@ -25,6 +25,15 @@ importers:
       '@mui/material':
         specifier: ^7.0.1
         version: 7.1.2(@emotion/react@11.14.0(@types/react@19.0.12)(react@19.1.0))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@19.0.12)(react@19.1.0))(@types/react@19.0.12)(react@19.1.0))(@types/react@19.0.12)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@ponder/client':
+        specifier: ^0.11.18
+        version: 0.11.18(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)(typescript@5.8.3)
+      '@ponder/react':
+        specifier: ^0.11.18
+        version: 0.11.18(@ponder/client@0.11.18(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)(typescript@5.8.3))(@tanstack/react-query@5.80.10(react@19.1.0))(react@19.1.0)(typescript@5.8.3)
+      '@tanstack/react-query':
+        specifier: ^5.80.10
+        version: 5.80.10(react@19.1.0)
     devDependencies:
       concurrently:
         specifier: ^9.1.2
@@ -156,9 +165,15 @@ importers:
       '@number-flow/react':
         specifier: ^0.5.9
         version: 0.5.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@ponder/client':
+        specifier: ^0.11.18
+        version: 0.11.18(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)(typescript@5.8.2)
       next:
         specifier: 14.0.3
         version: 14.0.3(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      ponder:
+        specifier: ^0.11.18
+        version: 0.11.18(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@20.17.28)(hono@4.8.1)(lightningcss@1.29.2)(typescript@5.8.2)(viem@2.31.3(typescript@5.8.2)(zod@3.25.67))(zod@3.25.67)
       postcss:
         specifier: ^8
         version: 8.5.3
@@ -171,6 +186,9 @@ importers:
       tailwindcss:
         specifier: ^3.3.0
         version: 3.4.17(ts-node@10.9.2(@types/node@20.17.28)(typescript@5.8.2))
+      viem:
+        specifier: ^2.31.3
+        version: 2.31.3(typescript@5.8.2)(zod@3.25.67)
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3
@@ -1441,6 +1459,25 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
+  '@ponder/client@0.11.18':
+    resolution: {integrity: sha512-P+JtTvHVZBOsjTP+B/rg7nnubQz2IXyibQubCsYAPkDDsZKdRKXFwax9B6ejOTotlBb58CxPBiTQ1QA0osCGZg==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@ponder/react@0.11.18':
+    resolution: {integrity: sha512-1JnbxdWmbdASAte2Yz+bxBLdFAkQi0E+MKZR61ke18x047dQeLLMRIFwrZGCa+a5v16hCwfpC4ozhmkxRSxAEw==}
+    peerDependencies:
+      '@ponder/client': '>=0.11.18'
+      '@tanstack/react-query': '>=5.0.0'
+      react: '>=18'
+      typescript: '>=5.0.4'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   '@ponder/utils@0.2.8':
     resolution: {integrity: sha512-eI3ijbE/eLeA4tEYA7QoIDPRsf+qhTKs1oTW33Ik4CaJPmTAxsYN5KZYxQwNqGwOPFHQn60QvAQ7+Ti2n9ql6Q==}
     peerDependencies:
@@ -1582,6 +1619,14 @@ packages:
 
   '@swc/helpers@0.5.2':
     resolution: {integrity: sha512-E4KcWTpoLHqwPHLxidpOqQbcrZVgi0rsmmZXUle1jXmJfuIf/UWpczUJ7MZZ5tlxytgJXyp0w4PGkkeLiuIdZw==}
+
+  '@tanstack/query-core@5.80.10':
+    resolution: {integrity: sha512-mUNQOtzxkjL6jLbyChZoSBP6A5gQDVRUiPvW+/zw/9ftOAz+H754zCj3D8PwnzPKyHzGkQ9JbH48ukhym9LK1Q==}
+
+  '@tanstack/react-query@5.80.10':
+    resolution: {integrity: sha512-6zM098J8sLy9oU60XAdzUlAH4wVzoMVsWUWiiE/Iz4fd67PplxeyL4sw/MPcVJJVhbwGGXCsHn9GrQt2mlAzig==}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@tsconfig/node10@1.0.11':
     resolution: {integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw==}
@@ -3026,6 +3071,14 @@ packages:
   events@3.3.0:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
+
+  eventsource-parser@3.0.2:
+    resolution: {integrity: sha512-6RxOBZ/cYgd8usLwsEl+EC09Au/9BcmCKYF2/xbml6DNczf7nv0MQb+7BA2F+li6//I+28VNlQR37XfQtcAJuA==}
+    engines: {node: '>=18.0.0'}
+
+  eventsource@3.0.7:
+    resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
+    engines: {node: '>=18.0.0'}
 
   execa@5.1.1:
     resolution: {integrity: sha512-8uSpZZocAZRBAPIEINJj3Lo9HyGitllczc27Eh5YYojjMFMn8yHMDMaUHE2Jqfq05D/wucwI4JGURyXt1vchyg==}
@@ -6566,6 +6619,95 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
+  '@ponder/client@0.11.18(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)(typescript@5.8.2)':
+    dependencies:
+      drizzle-orm: 0.41.0(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)
+      eventsource: 3.0.7
+      superjson: 2.2.2
+    optionalDependencies:
+      typescript: 5.8.2
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@ponder/client@0.11.18(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)(typescript@5.8.3)':
+    dependencies:
+      drizzle-orm: 0.41.0(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)
+      eventsource: 3.0.7
+      superjson: 2.2.2
+    optionalDependencies:
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@ponder/react@0.11.18(@ponder/client@0.11.18(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)(typescript@5.8.3))(@tanstack/react-query@5.80.10(react@19.1.0))(react@19.1.0)(typescript@5.8.3)':
+    dependencies:
+      '@ponder/client': 0.11.18(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)(typescript@5.8.3)
+      '@tanstack/react-query': 5.80.10(react@19.1.0)
+      react: 19.1.0
+      superjson: 2.2.2
+    optionalDependencies:
+      typescript: 5.8.3
+
+  '@ponder/utils@0.2.8(typescript@5.8.2)(viem@2.31.3(typescript@5.8.2)(zod@3.25.67))':
+    dependencies:
+      viem: 2.31.3(typescript@5.8.2)(zod@3.25.67)
+    optionalDependencies:
+      typescript: 5.8.2
+
   '@ponder/utils@0.2.8(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))':
     dependencies:
       viem: 2.31.3(typescript@5.8.3)(zod@3.25.67)
@@ -6666,6 +6808,13 @@ snapshots:
   '@swc/helpers@0.5.2':
     dependencies:
       tslib: 2.8.1
+
+  '@tanstack/query-core@5.80.10': {}
+
+  '@tanstack/react-query@5.80.10(react@19.1.0)':
+    dependencies:
+      '@tanstack/query-core': 5.80.10
+      react: 19.1.0
 
   '@tsconfig/node10@1.0.11': {}
 
@@ -7050,9 +7199,19 @@ snapshots:
       '@whatwg-node/promise-helpers': 1.3.2
       tslib: 2.8.1
 
+  abitype@0.10.3(typescript@5.8.2)(zod@3.25.67):
+    optionalDependencies:
+      typescript: 5.8.2
+      zod: 3.25.67
+
   abitype@0.10.3(typescript@5.8.3)(zod@3.25.67):
     optionalDependencies:
       typescript: 5.8.3
+      zod: 3.25.67
+
+  abitype@1.0.8(typescript@5.8.2)(zod@3.25.67):
+    optionalDependencies:
+      typescript: 5.8.2
       zod: 3.25.67
 
   abitype@1.0.8(typescript@5.8.3)(zod@3.25.67):
@@ -7500,7 +7659,7 @@ snapshots:
       dot-prop: 8.0.2
       env-paths: 3.0.0
       json-schema-typed: 8.0.1
-      semver: 7.7.1
+      semver: 7.7.2
       uint8array-extras: 0.3.0
 
   content-disposition@0.5.4:
@@ -7977,7 +8136,7 @@ snapshots:
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.0(eslint-plugin-import@2.31.0(eslint@8.57.1))(eslint@8.57.1)
-      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.10.0(eslint-plugin-import@2.31.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
+      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.10.0)(eslint@8.57.1)
       eslint-plugin-jsx-a11y: 6.10.2(eslint@8.57.1)
       eslint-plugin-react: 7.37.4(eslint@8.57.1)
       eslint-plugin-react-hooks: 5.0.0-canary-7118f5dd7-20230705(eslint@8.57.1)
@@ -8013,7 +8172,7 @@ snapshots:
       tinyglobby: 0.2.12
       unrs-resolver: 1.3.3
     optionalDependencies:
-      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.10.0(eslint-plugin-import@2.31.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
+      eslint-plugin-import: 2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.10.0)(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -8028,7 +8187,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.10.0(eslint-plugin-import@2.31.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1):
+  eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.10.0)(eslint@8.57.1):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.8
@@ -8256,6 +8415,12 @@ snapshots:
   eventemitter3@5.0.1: {}
 
   events@3.3.0: {}
+
+  eventsource-parser@3.0.2: {}
+
+  eventsource@3.0.7:
+    dependencies:
+      eventsource-parser: 3.0.2
 
   execa@5.1.1:
     dependencies:
@@ -9608,6 +9773,21 @@ snapshots:
       object-keys: 1.1.1
       safe-push-apply: 1.0.0
 
+  ox@0.8.1(typescript@5.8.2)(zod@3.25.67):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.0
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.2
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.0.8(typescript@5.8.2)(zod@3.25.67)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.8.2
+    transitivePeerDependencies:
+      - zod
+
   ox@0.8.1(typescript@5.8.3)(zod@3.25.67):
     dependencies:
       '@adraffy/ens-normalize': 1.11.0
@@ -9789,6 +9969,84 @@ snapshots:
     dependencies:
       find-up: 4.1.0
 
+  ponder@0.11.18(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@20.17.28)(hono@4.8.1)(lightningcss@1.29.2)(typescript@5.8.2)(viem@2.31.3(typescript@5.8.2)(zod@3.25.67))(zod@3.25.67):
+    dependencies:
+      '@babel/code-frame': 7.27.1
+      '@commander-js/extra-typings': 12.1.0(commander@12.1.0)
+      '@electric-sql/pglite': 0.2.13
+      '@escape.tech/graphql-armor-max-aliases': 2.6.2
+      '@escape.tech/graphql-armor-max-depth': 2.4.1
+      '@escape.tech/graphql-armor-max-tokens': 2.5.1
+      '@hono/node-server': 1.13.3(hono@4.8.1)
+      '@ponder/utils': 0.2.8(typescript@5.8.2)(viem@2.31.3(typescript@5.8.2)(zod@3.25.67))
+      abitype: 0.10.3(typescript@5.8.2)(zod@3.25.67)
+      ansi-escapes: 7.0.0
+      commander: 12.1.0
+      conf: 12.0.0
+      dataloader: 2.2.3
+      detect-package-manager: 3.0.2
+      dotenv: 16.5.0
+      drizzle-orm: 0.41.0(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(kysely@0.26.3)(pg@8.14.1)
+      glob: 10.4.5
+      graphql: 16.11.0
+      graphql-yoga: 5.13.5(graphql@16.11.0)
+      hono: 4.8.1
+      http-terminator: 3.2.0
+      kysely: 0.26.3
+      pg: 8.14.1
+      pg-connection-string: 2.7.0
+      pg-copy-streams: 6.0.6
+      pg-query-emscripten: 5.1.0
+      picocolors: 1.1.1
+      pino: 8.21.0
+      prom-client: 15.1.3
+      semver: 7.7.2
+      stacktrace-parser: 0.1.11
+      superjson: 2.2.2
+      terminal-size: 4.0.0
+      viem: 2.31.3(typescript@5.8.2)(zod@3.25.67)
+      vite: 5.0.7(@types/node@20.17.28)(lightningcss@1.29.2)
+      vite-node: 1.0.2(@types/node@20.17.28)(lightningcss@1.29.2)
+      vite-tsconfig-paths: 4.3.1(typescript@5.8.2)(vite@5.0.7(@types/node@20.17.28)(lightningcss@1.29.2))
+    optionalDependencies:
+      typescript: 5.8.2
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/node'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - less
+      - lightningcss
+      - mysql2
+      - pg-native
+      - postgres
+      - prisma
+      - sass
+      - sql.js
+      - sqlite3
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - zod
+
   ponder@0.11.18(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.1)(lightningcss@1.29.2)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67):
     dependencies:
       '@babel/code-frame': 7.27.1
@@ -9820,7 +10078,7 @@ snapshots:
       picocolors: 1.1.1
       pino: 8.21.0
       prom-client: 15.1.3
-      semver: 7.7.1
+      semver: 7.7.2
       stacktrace-parser: 0.1.11
       superjson: 2.2.2
       terminal-size: 4.0.0
@@ -10633,6 +10891,10 @@ snapshots:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
+  tsconfck@3.1.6(typescript@5.8.2):
+    optionalDependencies:
+      typescript: 5.8.2
+
   tsconfck@3.1.6(typescript@5.8.3):
     optionalDependencies:
       typescript: 5.8.3
@@ -10778,6 +11040,23 @@ snapshots:
 
   vary@1.1.2: {}
 
+  viem@2.31.3(typescript@5.8.2)(zod@3.25.67):
+    dependencies:
+      '@noble/curves': 1.9.2
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.0.8(typescript@5.8.2)(zod@3.25.67)
+      isows: 1.0.7(ws@8.18.2)
+      ox: 0.8.1(typescript@5.8.2)(zod@3.25.67)
+      ws: 8.18.2
+    optionalDependencies:
+      typescript: 5.8.2
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
+
   viem@2.31.3(typescript@5.8.3)(zod@3.25.67):
     dependencies:
       '@noble/curves': 1.9.2
@@ -10794,6 +11073,23 @@ snapshots:
       - bufferutil
       - utf-8-validate
       - zod
+
+  vite-node@1.0.2(@types/node@20.17.28)(lightningcss@1.29.2):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.4.0(supports-color@5.5.0)
+      pathe: 1.1.2
+      picocolors: 1.1.1
+      vite: 5.0.7(@types/node@20.17.28)(lightningcss@1.29.2)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
 
   vite-node@1.0.2(@types/node@24.0.3)(lightningcss@1.29.2):
     dependencies:
@@ -10812,6 +11108,17 @@ snapshots:
       - supports-color
       - terser
 
+  vite-tsconfig-paths@4.3.1(typescript@5.8.2)(vite@5.0.7(@types/node@20.17.28)(lightningcss@1.29.2)):
+    dependencies:
+      debug: 4.4.0(supports-color@5.5.0)
+      globrex: 0.1.2
+      tsconfck: 3.1.6(typescript@5.8.2)
+    optionalDependencies:
+      vite: 5.0.7(@types/node@20.17.28)(lightningcss@1.29.2)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
   vite-tsconfig-paths@4.3.1(typescript@5.8.3)(vite@5.0.7(@types/node@24.0.3)(lightningcss@1.29.2)):
     dependencies:
       debug: 4.4.0(supports-color@5.5.0)
@@ -10822,6 +11129,16 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  vite@5.0.7(@types/node@20.17.28)(lightningcss@1.29.2):
+    dependencies:
+      esbuild: 0.19.12
+      postcss: 8.5.3
+      rollup: 4.44.0
+    optionalDependencies:
+      '@types/node': 20.17.28
+      fsevents: 2.3.3
+      lightningcss: 1.29.2
 
   vite@5.0.7(@types/node@24.0.3)(lightningcss@1.29.2):
     dependencies:

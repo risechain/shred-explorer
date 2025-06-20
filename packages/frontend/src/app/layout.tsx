@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const interFont = Inter({
   variable: "--font-geist-sans",
@@ -14,7 +15,8 @@ const monoFont = Roboto_Mono({
 
 export const metadata: Metadata = {
   title: "Shred Explorer - Blockchain Explorer",
-  description: "Track blockchain statistics, view blocks and transactions in real-time.",
+  description:
+    "Track blockchain statistics, view blocks and transactions in real-time.",
 };
 
 export default function RootLayout({
@@ -27,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${interFont.variable} ${monoFont.variable} antialiased`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -4,12 +4,21 @@ import { block, tenBlockStat } from "ponder:schema";
 ponder.on("BlockUpdate:block", async ({ context, event }) => {
   const fullBlock = await context.client.getBlock({
     blockHash: event.block.hash,
+    includeTransactions: true,
   });
   await context.db
     .insert(block)
     .values({
       ...event.block,
-      transactions: fullBlock.transactions,
+      transactions: fullBlock.transactions.map(
+        ({ hash, from, to, value, transactionIndex }) => ({
+          hash,
+          from,
+          to,
+          value: value.toString(),
+          transactionIndex,
+        })
+      ),
       transactionCount: fullBlock.transactions.length,
     })
     .onConflictDoUpdate({
@@ -26,7 +35,15 @@ ponder.on("BlockUpdate:block", async ({ context, event }) => {
       stateRoot: event.block.stateRoot,
       timestamp: event.block.timestamp,
       totalDifficulty: event.block.totalDifficulty,
-      transactions: fullBlock.transactions,
+      transactions: fullBlock.transactions.map(
+        ({ hash, from, to, value, transactionIndex }) => ({
+          hash,
+          from,
+          to,
+          value: value.toString(),
+          transactionIndex,
+        })
+      ),
       transactionsRoot: event.block.transactionsRoot,
       transactionCount: fullBlock.transactions.length,
     });
