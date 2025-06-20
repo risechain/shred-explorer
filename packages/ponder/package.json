@@ -1,0 +1,28 @@
+{
+  "name": "shred-explorer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ponder dev",
+    "start": "ponder start",
+    "db": "ponder db",
+    "codegen": "ponder codegen",
+    "lint": "eslint .",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "ponder": "^0.11.18",
+    "hono": "^4.8.1",
+    "viem": "^2.31.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "eslint": "^9.29.0",
+    "eslint-config-ponder": "^0.11.18",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18.14"
+  }
+}
