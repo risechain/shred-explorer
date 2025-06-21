@@ -844,11 +844,11 @@ export default function Home() {
                     </TableHead>
                     <TableBody>
                       {blockData.map((block) => (
-                        <TableRow key={block.number}>
+                        <TableRow key={Number(block.number)}>
                           <TableCell>
                             <Typography
                               component="a"
-                              href={`https://explorer.testnet.riselabs.xyz/block/${block.number}`}
+                              href={`https://explorer.testnet.riselabs.xyz/block/${Number(block.number)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               sx={{
@@ -858,7 +858,7 @@ export default function Home() {
                                 "&:hover": { textDecoration: "underline" },
                               }}
                             >
-                              {block.number}
+                              {Number(block.number)}
                             </Typography>
                           </TableCell>
                           <TableCell>
