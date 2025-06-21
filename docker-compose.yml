@@ -1,0 +1,77 @@
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: blocks
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d blocks"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - ponder-network
+
+  # Ponder Indexer
+  indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile.indexer
+    environment:
+      DATABASE_URL: postgresql://username:password@postgres:5432/blocks
+      DATABASE_SCHEMA: public
+      # Add your RPC endpoints here or use .env file
+      PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
+    env_file:
+      - packages/ponder/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+    networks:
+      - ponder-network
+    volumes:
+      - ./packages/ponder/ponder.config.ts:/app/packages/ponder/ponder.config.ts:ro
+      - ./packages/ponder/ponder.schema.ts:/app/packages/ponder/ponder.schema.ts:ro
+      - ./packages/ponder/src:/app/packages/ponder/src:ro
+
+  # Ponder API Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    environment:
+      DATABASE_URL: postgresql://username:password@postgres:5432/blocks
+      DATABASE_SCHEMA: public
+    ports:
+      - "42069:42069"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ponder-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:42069/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  ponder-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

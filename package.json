@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:ponder": "pnpm --filter ponder dev",
-    "dev:api": "pnpm --filter api dev",
+    "dev:api": "pnpm --filter ponder serve",
     "dev:etl": "cd packages/etl && cargo run",
     "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:frontend\"",
     "build:frontend": "pnpm --filter frontend build",

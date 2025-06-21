@@ -167,7 +167,7 @@ function getTransactionRows(blocks: Block[]) {
               ? tx.transactionIndex
               : reversedTxs.length - i,
         },
-        blockNumber: block.number,
+        blockNumber: Number(block.number),
       });
 
       // Only collect up to 10 transactions total
@@ -201,7 +201,7 @@ function getTransactionRows(blocks: Block[]) {
               whiteSpace: "nowrap",
             }}
           >
-            {tx.hash.substring(0, 14) || "0x..."}
+            {tx.hash?.substring(0, 14) || "0x..."}
           </Typography>
         </TableCell>
         <TableCell>
@@ -216,7 +216,7 @@ function getTransactionRows(blocks: Block[]) {
               "&:hover": { textDecoration: "underline" },
             }}
           >
-            {blockNumber}
+            {blockNumber || "N/A"}
           </Typography>
         </TableCell>
         <TableCell align="center">
@@ -875,7 +875,7 @@ export default function Home() {
                                 "&:hover": { textDecoration: "underline" },
                               }}
                             >
-                              {block.number}
+                              {block.number?.toString() || "N/A"}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -893,7 +893,7 @@ export default function Home() {
                                 textOverflow: "ellipsis",
                               }}
                             >
-                              {block.hash.substring(0, 14)}...
+                              {block.hash?.substring(0, 14) || "0x..."}...
                             </Typography>
                           </TableCell>
                           <TableCell align="right">

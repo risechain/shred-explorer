@@ -16,4 +16,8 @@ export default createConfig({
       startBlock: "latest",
     },
   },
+  database: { 
+    kind: "postgres", 
+    connectionString: process.env.DATABASE_URL || "postgresql://username:password@localhost:5432/blocks", 
+  }, 
 });
