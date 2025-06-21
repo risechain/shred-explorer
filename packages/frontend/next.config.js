@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  webpack: (config, { isServer }) => {
+    // Ignore the critical dependency warning from @whatwg-node/fetch
+    config.module = {
+      ...config.module,
+      exprContextCritical: false,
+    };
+    
+    return config;
+  },
 };
 
 module.exports = nextConfig;

@@ -6,10 +6,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:frontend": "pnpm --filter frontend dev",
+    "dev:ponder": "pnpm --filter ponder dev",
     "dev:api": "pnpm --filter api dev",
     "dev:etl": "cd packages/etl && cargo run",
     "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:frontend\"",
     "build:frontend": "pnpm --filter frontend build",
+    "build:ponder": "pnpm --filter ponder build",
     "build:api": "pnpm --filter api build",
     "build:etl": "cd packages/etl && cargo build --release",
     "build": "pnpm build:api && pnpm build:frontend",
@@ -31,10 +33,10 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^7.0.1",
-    "@mui/material": "^7.0.1",
-    "@ponder/client": "^0.11.18",
-    "@ponder/react": "^0.11.18",
+    "@mui/icons-material": "^7.1.2",
+    "@mui/material": "^7.1.2",
+    "@ponder/client": "^0.11.19",
+    "@ponder/react": "^0.11.19",
     "@tanstack/react-query": "^5.80.10"
   }
 }

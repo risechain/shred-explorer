@@ -240,7 +240,9 @@ function getTransactionRows(blocks: Block[]) {
 
 export default function Home() {
   // State hooks
-  const [newTransactionCount, setNewTransactionCount] = useState(0);
+  const [cumulativeNewTransactions, setCumulativeNewTransactions] = useState(0);
+  const [baseTransactionCount, setBaseTransactionCount] = useState<number | null>(null);
+  const [lastProcessedBlock, setLastProcessedBlock] = useState<bigint | null>(null);
   const [totalTransactions, setTotalTransactions] = useState<number | null>(
     null
   );
@@ -285,13 +287,19 @@ export default function Home() {
     setLatestBlockNumber(Number(tenBlockStatsData[0].headNumber));
   }, [tenBlockStatsData]);
 
+  // Track cumulative new transactions
   useEffect(() => {
     const latestBlock = blockData?.[0];
 
     if (!latestBlock) return;
 
-    setNewTransactionCount(latestBlock.transactionCount);
-  }, [blockData]);
+    // If this is a new block we haven't processed yet
+    if (lastProcessedBlock === null || latestBlock.number > lastProcessedBlock) {
+      // Add the transactions from this new block to our cumulative count
+      setCumulativeNewTransactions(prev => prev + latestBlock.transactionCount);
+      setLastProcessedBlock(latestBlock.number);
+    }
+  }, [blockData, lastProcessedBlock]);
 
   // Fetch total transactions from external API
   const fetchTotalTransactions = useCallback(async () => {
@@ -307,7 +315,13 @@ export default function Home() {
       const data = await response.json();
       console.log(data);
       if (data && typeof data.total_transactions === "string") {
-        setTotalTransactions(Number(data.total_transactions));
+        const totalFromAPI = Number(data.total_transactions);
+        setTotalTransactions(totalFromAPI);
+        
+        // If this is our first fetch, set it as the base count
+        if (baseTransactionCount === null) {
+          setBaseTransactionCount(totalFromAPI);
+        }
       } else {
         console.warn(
           "External API response does not include totalTransactions field",
@@ -321,13 +335,16 @@ export default function Home() {
 
   // Fetch initial data
   useEffect(() => {
-    //   // Set up periodic refresh for total transactions
+    // Fetch immediately on mount
+    fetchTotalTransactions();
+    
+    // Set up periodic refresh for total transactions
     const intervalId = setInterval(fetchTotalTransactions, 60000); // Refresh every minute
 
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
+  }, [fetchTotalTransactions]);
 
   // Animation effect for transaction counts
   useEffect(() => {
@@ -493,7 +510,7 @@ export default function Home() {
               Error
             </Typography>
             <Typography variant="body1" color="text.secondary" align="center">
-              {blockError?.message ?? statsError?.message}
+              {blockError?.message || statsError?.message || "An error occurred while loading data"}
             </Typography>
           </Paper>
         </Box>
@@ -749,8 +766,8 @@ export default function Home() {
                         trend={1}
                         value={
                           totalTransactions !== null
-                            ? totalTransactions + newTransactionCount
-                            : newTransactionCount
+                            ? totalTransactions + cumulativeNewTransactions
+                            : cumulativeNewTransactions
                         }
                       />
                     </Typography>
@@ -760,7 +777,7 @@ export default function Home() {
                         color="text.secondary"
                         sx={{ mt: 0.5, fontSize: "0.75rem" }}
                       >
-                        +{newTransactionCount.toLocaleString()} new
+                        +{cumulativeNewTransactions.toLocaleString()} new
                       </Typography>
                     )}
                   </Box>

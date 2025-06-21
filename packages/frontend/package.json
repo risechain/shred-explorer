@@ -20,6 +20,8 @@
     "@mui/material": "^5.14.18",
     "@number-flow/react": "^0.5.9",
     "@ponder/client": "^0.11.18",
+    "@ponder/react": "^0.11.19",
+    "@tanstack/react-query": "^5.80.10",
     "next": "14.0.3",
     "ponder": "^0.11.18",
     "postcss": "^8",
@@ -30,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4.1.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
