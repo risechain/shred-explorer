@@ -1,0 +1,37 @@
+# Dockerfile for Ponder Server (API/GraphQL)
+FROM node:20-alpine
+
+# Install dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
+# Install pnpm
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+# Copy root package files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy patches directory
+COPY patches/ ./patches/
+
+# Copy ponder package.json
+COPY packages/ponder/package.json ./packages/ponder/
+
+# Install dependencies for the workspace
+RUN pnpm install --frozen-lockfile
+
+# Copy ponder source code
+COPY packages/ponder/ ./packages/ponder/
+
+# Set working directory to ponder package
+WORKDIR /app/packages/ponder
+
+# Generate types
+RUN pnpm run codegen
+
+# Expose the API port (default Ponder port)
+EXPOSE 42069
+
+# Run in server mode with API enabled
+CMD ["pnpm", "ponder", "serve", "--schema", "public"]
