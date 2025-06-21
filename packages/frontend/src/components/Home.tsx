@@ -272,7 +272,7 @@ export default function Home() {
     const [ten] = tenBlockStatsData;
     const stats: Stats = {
       gasPerSecond: Number(ten.totalGas) / ten.totalTimeSeconds,
-      tps: ten.totalTransactions / ten.totalTimeSeconds,
+      tps: Math.round(ten.totalTransactions / ten.totalTimeSeconds),
       windowSize: 10,
       lastUpdate: Date.now(),
       shredInterval: ten.totalTimeSeconds / ten.totalTransactions,
