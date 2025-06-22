@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import NumberFlow from "@number-flow/react";
 import {
   Table,
@@ -19,27 +19,10 @@ import {
   createTheme,
   CssBaseline,
 } from "@mui/material";
-import { usePonderQuery } from "@ponder/react";
-import { blocksQueryOptions, statsQueryOptions } from "@/lib/ponder";
+import { useSynchronizedData } from "../hooks/useSynchronizedData";
 import { formatUnits } from "viem";
 
 // Types
-interface Stats {
-  tps: number;
-  shredInterval?: number;
-  gasPerSecond: number;
-  windowSize: number;
-  lastUpdate?: number; // For our UI tracking
-}
-
-interface Block {
-  number: number;
-  hash: string;
-  parentHash: string;
-  timestamp: number;
-  transactionCount: number;
-  transactions?: Transaction[];
-}
 
 interface Transaction {
   hash: string;
@@ -49,12 +32,6 @@ interface Transaction {
   transactionIndex: number;
 }
 
-// API URLs - configure based on environment
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3002";
-
-// API headers configuration is handled in proxy endpoints
 
 // Create a theme
 const theme = createTheme({
@@ -143,45 +120,13 @@ const theme = createTheme({
   },
 });
 
-// Helper function to generate transaction rows - separated from the component render process
+// Helper function to generate transaction rows from separate transaction data
 // to avoid React hooks rules violations (can't use hooks conditionally)
-function getTransactionRows(blocks: Block[]) {
-  // Process and collect transactions from all blocks
-  const allTransactions: Array<{ tx: Transaction; blockNumber: number }> = [];
-
-  // Iterate once through all blocks
-  for (const block of blocks) {
-    if (!block.transactions || block.transactions.length === 0) continue;
-
-    // Don't modify the original transactions array, create a new one
-    const reversedTxs = [...block.transactions].reverse();
-
-    for (let i = 0; i < reversedTxs.length; i++) {
-      const tx = reversedTxs[i];
-      allTransactions.push({
-        tx: {
-          ...tx,
-          // Preserve the transaction index if it exists
-          transactionIndex:
-            tx.transactionIndex !== undefined
-              ? tx.transactionIndex
-              : reversedTxs.length - i,
-        },
-        blockNumber: Number(block.number),
-      });
-
-      // Only collect up to 10 transactions total
-      if (allTransactions.length >= 10) break;
-    }
-
-    // Early exit if we already have 10 transactions
-    if (allTransactions.length >= 10) break;
-  }
-
+function getTransactionRows(transactions: any[] | undefined) {
   // Display transactions
-  if (allTransactions.length > 0) {
-    return allTransactions.map(({ tx, blockNumber }) => (
-      <TableRow key={`${blockNumber}-${tx.hash}`}>
+  if (transactions && transactions.length > 0) {
+    return transactions.slice(0, 10).map((tx) => (
+      <TableRow key={tx.hash}>
         <TableCell>
           <Typography
             component="a"
@@ -207,7 +152,7 @@ function getTransactionRows(blocks: Block[]) {
         <TableCell>
           <Typography
             component="a"
-            href={`https://explorer.testnet.riselabs.xyz/block/${blockNumber}`}
+            href={`https://explorer.testnet.riselabs.xyz/block/${Number(tx.blockNumber)}`}
             target="_blank"
             rel="noopener noreferrer"
             sx={{
@@ -216,7 +161,7 @@ function getTransactionRows(blocks: Block[]) {
               "&:hover": { textDecoration: "underline" },
             }}
           >
-            {blockNumber || "N/A"}
+            {Number(tx.blockNumber) || "N/A"}
           </Typography>
         </TableCell>
         <TableCell align="center">
@@ -246,46 +191,39 @@ export default function Home() {
   const [totalTransactions, setTotalTransactions] = useState<number | null>(
     null
   );
-  const [latestBlockNumber, setLatestBlockNumber] = useState<number | null>(
+  const [latestBlockNumberState, setLatestBlockNumberState] = useState<number | null>(
     null
   );
   const [animatingTransactionCounts, setAnimatingTransactionCounts] = useState<{
     [blockNumber: number]: number;
   }>({});
 
+  // Use synchronized data hook
   const {
-    data: blockData,
-    isError: blockIsError,
-    isPending: blockPending,
-    error: blockError,
-  } = usePonderQuery({ ...blocksQueryOptions, refetchInterval: 1000 });
+    blocks: blockData,
+    transactions: transactionData,
+    stats: statsData,
+    latestBlockNumber,
+    isLoading: dataLoading,
+    isError: dataError,
+    error: error,
+    lastUpdate,
+  } = useSynchronizedData();
 
-  const {
-    data: tenBlockStatsData,
-    isError: statsIsError,
-    isPending: statsPending,
-    error: statsError,
-  } = usePonderQuery({ ...statsQueryOptions, refetchInterval: 1000 });
+  // Derive individual loading states for backward compatibility
+  const blockPending = dataLoading;
+  const statsPending = dataLoading;
+  const blockIsError = dataError;
+  const statsIsError = dataError;
+  const blockError = error;
+  const statsError = error;
 
-  const statsData = useMemo(() => {
-    if (!tenBlockStatsData) return;
-    const [ten] = tenBlockStatsData;
-    const stats: Stats = {
-      gasPerSecond: Number(ten.totalGas) / ten.totalTimeSeconds,
-      tps: Math.round(ten.totalTransactions / ten.totalTimeSeconds),
-      windowSize: 10,
-      lastUpdate: Date.now(),
-      shredInterval: ten.totalTimeSeconds / ten.totalTransactions,
-    };
-
-    return stats;
-  }, [tenBlockStatsData]);
-
+  // Update latest block number from stats
   useEffect(() => {
-    if (!tenBlockStatsData?.[0]) return;
-
-    setLatestBlockNumber(Number(tenBlockStatsData[0].headNumber));
-  }, [tenBlockStatsData]);
+    if (latestBlockNumber) {
+      setLatestBlockNumberState(Number(latestBlockNumber));
+    }
+  }, [latestBlockNumber]);
 
   // Track cumulative new transactions
   useEffect(() => {
@@ -349,7 +287,7 @@ export default function Home() {
   // Animation effect for transaction counts
   useEffect(() => {
     // Only animate for the latest block
-    if (latestBlockNumber === null) return;
+    if (latestBlockNumberState === null) return;
 
     // Check if we have any blocks with animating transaction counts
     const animatingBlocks = Object.keys(animatingTransactionCounts);
@@ -371,7 +309,7 @@ export default function Home() {
           if (!block) continue;
 
           // If this is not the latest block anymore, remove it from animation
-          if (blockNum !== latestBlockNumber) {
+          if (blockNum !== latestBlockNumberState) {
             delete newCounts[blockNum];
             continue;
           }
@@ -410,7 +348,7 @@ export default function Home() {
 
     // Cleanup function
     return () => clearInterval(interval);
-  }, [blockData, animatingTransactionCounts, latestBlockNumber]);
+  }, [blockData, animatingTransactionCounts, latestBlockNumberState]);
 
   // Format timestamp
   const formatTimestamp = (timestamp: number) => {
@@ -900,11 +838,11 @@ export default function Home() {
                             <Box
                               sx={{
                                 fontWeight:
-                                  Number(block.number) === latestBlockNumber
+                                  Number(block.number) === latestBlockNumberState
                                     ? 600
                                     : 400,
                                 color:
-                                  Number(block.number) === latestBlockNumber
+                                  Number(block.number) === latestBlockNumberState
                                     ? "primary.main"
                                     : "inherit",
                               }}
@@ -984,17 +922,8 @@ export default function Home() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {/* Move useMemo hook outside of the render function */}
-                      {getTransactionRows(
-                        blockData.map((block) => ({
-                          hash: block.hash,
-                          number: Number(block.number),
-                          parentHash: block.parentHash,
-                          timestamp: Number(block.timestamp),
-                          transactionCount: block.transactionCount,
-                          transactions: block.transactions as Transaction[],
-                        }))
-                      )}
+                      {/* Use separate transaction data */}
+                      {getTransactionRows(transactionData)}
                     </TableBody>
                   </Table>
                 </TableContainer>

@@ -19,13 +19,42 @@ export const block = onchainTable(
     totalDifficulty: t.bigint(),
     size: t.bigint().notNull(),
     transactionCount: t.integer().notNull(),
-    transactions: t.jsonb(),
     createdAt: t.timestamp().notNull().$defaultFn(() => new Date()),
     updatedAt: t.timestamp().notNull().$defaultFn(() => new Date()),
   }),
   (table) => ({
     parentHashIdx: index().on(table.parentHash),
     timestampIdx: index().on(table.timestamp),
+  })
+);
+
+export const transaction = onchainTable(
+  "transaction",
+  (t) => ({
+    hash: t.text().primaryKey(),
+    blockNumber: t.bigint().notNull(),
+    blockHash: t.text().notNull(),
+    transactionIndex: t.integer().notNull(),
+    from: t.text(),
+    to: t.text(),
+    value: t.text().notNull(),
+    gasLimit: t.bigint(),
+    gasUsed: t.bigint(),
+    gasPrice: t.bigint(),
+    maxFeePerGas: t.bigint(),
+    maxPriorityFeePerGas: t.bigint(),
+    nonce: t.bigint(),
+    input: t.text(),
+    type: t.text(),
+    createdAt: t.timestamp().notNull().$defaultFn(() => new Date()),
+    updatedAt: t.timestamp().notNull().$defaultFn(() => new Date()),
+  }),
+  (table) => ({
+    blockNumberIdx: index().on(table.blockNumber),
+    blockHashIdx: index().on(table.blockHash),
+    fromIdx: index().on(table.from),
+    toIdx: index().on(table.to),
+    transactionIndexIdx: index().on(table.transactionIndex),
   })
 );
 

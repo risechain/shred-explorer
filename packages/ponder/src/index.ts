@@ -1,24 +1,17 @@
 import { ponder } from "ponder:registry";
-import { block, tenBlockStat } from "ponder:schema";
+import { block, transaction, tenBlockStat } from "ponder:schema";
 
 ponder.on("BlockUpdate:block", async ({ context, event }) => {
   const fullBlock = await context.client.getBlock({
     blockHash: event.block.hash,
     includeTransactions: true,
   });
+
+  // Insert or update the block record
   await context.db
     .insert(block)
     .values({
       ...event.block,
-      transactions: fullBlock.transactions.map(
-        ({ hash, from, to, value, transactionIndex }) => ({
-          hash,
-          from,
-          to,
-          value: value.toString(),
-          transactionIndex,
-        })
-      ),
       transactionCount: fullBlock.transactions.length,
     })
     .onConflictDoUpdate({
@@ -35,18 +28,47 @@ ponder.on("BlockUpdate:block", async ({ context, event }) => {
       stateRoot: event.block.stateRoot,
       timestamp: event.block.timestamp,
       totalDifficulty: event.block.totalDifficulty,
-      transactions: fullBlock.transactions.map(
-        ({ hash, from, to, value, transactionIndex }) => ({
-          hash,
-          from,
-          to,
-          value: value.toString(),
-          transactionIndex,
-        })
-      ),
       transactionsRoot: event.block.transactionsRoot,
       transactionCount: fullBlock.transactions.length,
     });
+
+  // Insert transactions into separate table
+  for (const tx of fullBlock.transactions) {
+    await context.db
+      .insert(transaction)
+      .values({
+        hash: tx.hash,
+        blockNumber: event.block.number,
+        blockHash: event.block.hash,
+        transactionIndex: Number(tx.transactionIndex || 0),
+        from: tx.from,
+        to: tx.to,
+        value: tx.value.toString(),
+        gasLimit: tx.gas,
+        gasUsed: undefined, // Will be set if we have receipt data
+        gasPrice: tx.gasPrice,
+        maxFeePerGas: tx.maxFeePerGas,
+        maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+        nonce: BigInt(tx.nonce || 0),
+        input: tx.input,
+        type: tx.type,
+      })
+      .onConflictDoUpdate({
+        blockNumber: event.block.number,
+        blockHash: event.block.hash,
+        transactionIndex: Number(tx.transactionIndex || 0),
+        from: tx.from,
+        to: tx.to,
+        value: tx.value.toString(),
+        gasLimit: tx.gas,
+        gasPrice: tx.gasPrice,
+        maxFeePerGas: tx.maxFeePerGas,
+        maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+        nonce: BigInt(tx.nonce || 0),
+        input: tx.input,
+        type: tx.type,
+      });
+  }
 
   let tail = 10n;
 

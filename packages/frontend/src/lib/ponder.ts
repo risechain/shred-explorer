@@ -1,4 +1,4 @@
-import { createClient, desc } from "@ponder/client";
+import { createClient, desc, inArray, gte } from "@ponder/client";
 import * as schema from "./ponder.schema";
 import { getPonderQueryOptions } from "@ponder/react";
 
@@ -20,4 +20,18 @@ const statsQueryOptions = getPonderQueryOptions(client, (db) =>
     .orderBy(desc(schema.tenBlockStat.headNumber))
 );
 
-export { client, schema, blocksQueryOptions, statsQueryOptions };
+const transactionsQueryOptions = (blockNumbers: bigint[]) =>
+  getPonderQueryOptions(client, (db) =>
+    db
+      .select()
+      .from(schema.transaction)
+      .where(
+        blockNumbers.length > 0
+          ? inArray(schema.transaction.blockNumber, blockNumbers)
+          : gte(schema.transaction.blockNumber, BigInt(0))
+      )
+      .orderBy(desc(schema.transaction.blockNumber), desc(schema.transaction.transactionIndex))
+      .limit(50)
+  );
+
+export { client, schema, blocksQueryOptions, statsQueryOptions, transactionsQueryOptions };
