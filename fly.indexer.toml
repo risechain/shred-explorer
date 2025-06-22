@@ -10,7 +10,7 @@ primary_region = 'iad'
   dockerfile = 'Dockerfile.indexer'
 
 [env]
-  DATABASE_SCHEMA = 'public'
+  DATABASE_SCHEMA = 'v2'
   PONDER_LOG_LEVEL = 'info'
 
 [http_service]
@@ -31,7 +31,7 @@ primary_region = 'iad'
     timeout = '10s'
     grace_period = '30s'
     method = 'GET'
-    path = '/health'
+    path = '/ready'
 
 [[vm]]
   memory = '1gb'
