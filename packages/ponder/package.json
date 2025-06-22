@@ -10,7 +10,10 @@
     "db": "ponder db",
     "codegen": "ponder codegen",
     "lint": "eslint .",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "build": "npm run codegen && npm run typecheck",
+    "railway:deploy": "npm run build && npm run start",
+    "railway:serve": "npm run serve"
   },
   "dependencies": {
     "hono": "^4.8.2",

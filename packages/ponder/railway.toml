@@ -1,0 +1,25 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "./packages/ponder/Dockerfile"
+
+[deploy]
+startCommand = "npm run start"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "ponder-indexer"
+internalPort = 42069
+startCommand = "npm run start"
+
+[[services]]
+name = "ponder-api"
+internalPort = 42069
+startCommand = "npm run serve"
+
+[env]
+NODE_ENV = "production"
+DATABASE_SCHEMA = "public"
+PONDER_LOG_LEVEL = "info"
