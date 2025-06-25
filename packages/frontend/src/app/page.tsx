@@ -1,4 +1,4 @@
-import Home from "@/components/Home";
+import ExplorerHome from "@/components/ExplorerHome";
 import { blocksQueryOptions, statsQueryOptions } from "@/lib/ponder";
 import {
   dehydrate,
@@ -15,7 +15,7 @@ export default async function App() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <Home />
+      <ExplorerHome />
     </HydrationBoundary>
   );
 }
