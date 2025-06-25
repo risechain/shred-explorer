@@ -236,8 +236,8 @@ importers:
         specifier: ^4.8.2
         version: 4.8.2
       ponder:
-        specifier: ^0.11.19
-        version: 0.11.19(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67)
+        specifier: ^0.11.20
+        version: 0.11.20(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67)
       viem:
         specifier: ^2.31.3
         version: 2.31.3(typescript@5.8.3)(zod@3.25.67)
@@ -249,8 +249,8 @@ importers:
         specifier: ^9.29.0
         version: 9.29.0(jiti@2.4.2)
       eslint-config-ponder:
-        specifier: ^0.11.19
-        version: 0.11.19(@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2))
+        specifier: ^0.11.20
+        version: 0.11.20(@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2))
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -3044,8 +3044,8 @@ packages:
       typescript:
         optional: true
 
-  eslint-config-ponder@0.11.19:
-    resolution: {integrity: sha512-D7mPn6xNcmaY9QCLpq3W6hO8ElSRAJ3tyyHMmHHRw8GBCCOXM5MVSuFSdwoKnfwzBu2++svUFFVOqUvAOOx5Sw==}
+  eslint-config-ponder@0.11.20:
+    resolution: {integrity: sha512-nPceD4bZM6h4eaxga0DEFns2UK2/myIZZzadtHrAnMiLiRS/k+SEfCXCYmPEu1M9S1XXV7pZ/7uuIqIBOKj7+w==}
     peerDependencies:
       '@typescript-eslint/eslint-plugin': ^6.3.0
       '@typescript-eslint/parser': ^6.3.0
@@ -4530,6 +4530,18 @@ packages:
 
   ponder@0.11.19:
     resolution: {integrity: sha512-x7BB80ZapLoHuRirYkafq4ZljUjNrff7Yb3/uC0FFOXaecpSml2Yg+Pu3gZz6ROvmvBAze2D3iqmFJVzmm/i7w==}
+    engines: {node: '>=18.14'}
+    hasBin: true
+    peerDependencies:
+      hono: '>=4.5'
+      typescript: '>=5.0.4'
+      viem: '>=2'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  ponder@0.11.20:
+    resolution: {integrity: sha512-v0q/wxV5WK4BsxwmV/+4elonBMZsy4JiLcoYQuOCFTnScgHAjYXjeBz1a8JdmfsJ4kwfdhQsXy2wu0LfW8w5Bg==}
     engines: {node: '>=18.14'}
     hasBin: true
     peerDependencies:
@@ -8331,7 +8343,7 @@ snapshots:
       - eslint-plugin-import-x
       - supports-color
 
-  eslint-config-ponder@0.11.19(@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2)):
+  eslint-config-ponder@0.11.20(@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2)):
     dependencies:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3)
       '@typescript-eslint/parser': 6.21.0(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3)
@@ -10233,7 +10245,7 @@ snapshots:
       - terser
       - zod
 
-  ponder@0.11.19(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67):
+  ponder@0.11.20(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67):
     dependencies:
       '@babel/code-frame': 7.27.1
       '@commander-js/extra-typings': 12.1.0(commander@12.1.0)
