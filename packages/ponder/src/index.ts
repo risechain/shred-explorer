@@ -1,17 +1,15 @@
 import { ponder } from "ponder:registry";
 import { block, transaction, tenBlockStat } from "ponder:schema";
-import { withRpcRetry } from "./utils/retry";
 
 ponder.on("BlockUpdate:block", async ({ context, event }) => {
-  // Fetch block data with retry logic
-  const fullBlock = await withRpcRetry(
-    () => context.client.getBlock({
-      blockHash: event.block.hash,
-      includeTransactions: true,
-    }),
-    event.block.number,
-    'getBlock'
-  );
+
+  // gross patch for Block at hash could not be found
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const fullBlock = await context.client.getBlock({
+    blockHash: event.block.hash,
+    includeTransactions: true,
+  });
 
   // Insert or update the block record
   await context.db
