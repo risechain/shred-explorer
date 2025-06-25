@@ -15,25 +15,25 @@ export const apolloClient = new ApolloClient({
         fields: {
           blocks: {
             keyArgs: ['where', 'orderBy', 'orderDirection', 'limit'],
-            merge(existing, incoming, { args }) {
+            merge() {
               // For real-time data with limits, always replace with incoming data
               // This ensures we get the latest N blocks, not accumulated results
-              return incoming;
+              return arguments[1]; // incoming
             },
           },
           transactions: {
             keyArgs: ['where', 'orderBy', 'orderDirection', 'limit'],
-            merge(existing, incoming, { args }) {
+            merge() {
               // For real-time data with limits, always replace with incoming data
               // This ensures we get the latest N transactions, not accumulated results
-              return incoming;
+              return arguments[1]; // incoming
             },
           },
           tenBlockStats: {
             keyArgs: ['where', 'orderBy', 'orderDirection', 'limit'],
-            merge(existing, incoming) {
+            merge() {
               // Always replace stats data with the latest
-              return incoming;
+              return arguments[1]; // incoming
             },
           },
         },

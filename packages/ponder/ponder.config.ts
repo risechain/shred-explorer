@@ -5,7 +5,7 @@ export default createConfig({
   chains: {
     riseTestnet: {
       id: riseTestnet.id,
-      rpc: riseTestnet.rpcUrls.default.http[0],
+      rpc: process.env.PONDER_RPC_URL_1 || riseTestnet.rpcUrls.default.http[0],
       ws: riseTestnet.rpcUrls.default.webSocket[0],
     },
   },
@@ -16,8 +16,14 @@ export default createConfig({
       startBlock: "latest",
     },
   },
-  database: { 
-    kind: "postgres", 
-    connectionString: process.env.DATABASE_URL || "postgresql://username:password@localhost:5432/blocks", 
-  }, 
+  // Use SQLite for development (no setup required)
+  // For production with high throughput, use PostgreSQL:
+  // database: { 
+  //   kind: "postgres", 
+  //   connectionString: process.env.DATABASE_URL,
+  //   poolConfig: {
+  //     max: 20,
+  //     ssl: false,
+  //   },
+  // },
 });
