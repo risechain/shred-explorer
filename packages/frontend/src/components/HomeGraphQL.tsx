@@ -101,15 +101,15 @@ const theme = createTheme({
 });
 
 // Helper function for timestamps
-function formatRelativeTime(timestamp: bigint | string): string {
-  const now = BigInt(Math.floor(Date.now() / 1000));
-  const time = typeof timestamp === 'string' ? BigInt(timestamp) : timestamp;
-  const diff = now - time;
-
-  if (diff < BigInt(60)) return `${diff}s ago`;
-  if (diff < BigInt(3600)) return `${diff / BigInt(60)}m ago`;
-  if (diff < BigInt(86400)) return `${diff / BigInt(3600)}h ago`;
-  return `${diff / BigInt(86400)}d ago`;
+function formatTimestamp(timestamp: bigint | string): string {
+  const time = typeof timestamp === 'string' ? Number(timestamp) : Number(timestamp);
+  const date = new Date(time * 1000); // Convert from seconds to milliseconds
+  return date.toLocaleTimeString('en-US', { 
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 }
 
 // Helper functions
@@ -477,7 +477,7 @@ export default function HomeGraphQL() {
                   <TableHead>
                     <TableRow>
                       <TableCell>Block</TableCell>
-                      <TableCell>Age</TableCell>
+                      <TableCell>Timestamp</TableCell>
                       <TableCell align="right">Txns</TableCell>
                       <TableCell align="right">Gas Used</TableCell>
                     </TableRow>
@@ -503,8 +503,8 @@ export default function HomeGraphQL() {
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" color="text.secondary">
-                              {formatRelativeTime(block.timestamp)}
+                            <Typography variant="body2" fontFamily="var(--font-geist-mono)" color="text.secondary">
+                              {formatTimestamp(block.timestamp)}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
