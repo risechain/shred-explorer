@@ -32,42 +32,34 @@ ponder.on("BlockUpdate:block", async ({ context, event }) => {
       transactionCount: fullBlock.transactions.length,
     });
 
-  // Insert transactions into separate table
-  for (const tx of fullBlock.transactions) {
+  // Batch insert all transactions in a single database transaction
+  if (fullBlock.transactions.length > 0) {
+    // Prepare all transaction data
+    const transactionValues = fullBlock.transactions.map(tx => ({
+      hash: tx.hash,
+      blockNumber: event.block.number,
+      blockHash: event.block.hash,
+      transactionIndex: Number(tx.transactionIndex || 0),
+      from: tx.from,
+      to: tx.to,
+      value: tx.value.toString(),
+      gasLimit: tx.gas,
+      gasUsed: undefined, // Will be set if we have receipt data
+      gasPrice: tx.gasPrice,
+      maxFeePerGas: tx.maxFeePerGas,
+      maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+      nonce: BigInt(tx.nonce || 0),
+      input: tx.input,
+      type: tx.type,
+    }));
+
+    // Use database transaction for atomic batch insert
+
     await context.db
       .insert(transaction)
-      .values({
-        hash: tx.hash,
-        blockNumber: event.block.number,
-        blockHash: event.block.hash,
-        transactionIndex: Number(tx.transactionIndex || 0),
-        from: tx.from,
-        to: tx.to,
-        value: tx.value.toString(),
-        gasLimit: tx.gas,
-        gasUsed: undefined, // Will be set if we have receipt data
-        gasPrice: tx.gasPrice,
-        maxFeePerGas: tx.maxFeePerGas,
-        maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-        nonce: BigInt(tx.nonce || 0),
-        input: tx.input,
-        type: tx.type,
-      })
-      .onConflictDoUpdate({
-        blockNumber: event.block.number,
-        blockHash: event.block.hash,
-        transactionIndex: Number(tx.transactionIndex || 0),
-        from: tx.from,
-        to: tx.to,
-        value: tx.value.toString(),
-        gasLimit: tx.gas,
-        gasPrice: tx.gasPrice,
-        maxFeePerGas: tx.maxFeePerGas,
-        maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-        nonce: BigInt(tx.nonce || 0),
-        input: tx.input,
-        type: tx.type,
-      });
+      .values(transactionValues)
+    
+    console.log(`Block ${event.block.number}: Batch inserted ${fullBlock.transactions.length} transactions`);
   }
 
   let tail = 10n;
