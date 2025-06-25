@@ -4,7 +4,7 @@ import { block, transaction, tenBlockStat } from "ponder:schema";
 ponder.on("BlockUpdate:block", async ({ context, event }) => {
 
   // gross patch for Block at hash could not be found
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   const fullBlock = await context.client.getBlock({
     blockHash: event.block.hash,
