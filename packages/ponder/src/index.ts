@@ -7,7 +7,8 @@ ponder.on("BlockUpdate:block", async ({ context, event }) => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
   const fullBlock = await context.client.getBlock({
-    blockHash: event.block.hash,
+    // blockHash: event.block.hash,
+    blockNumber: event.block.number,
     includeTransactions: true,
   });
 
