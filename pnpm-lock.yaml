@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  ponder:
-    hash: 262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785
-    path: patches/ponder.patch
-
 importers:
 
   .:
@@ -185,7 +180,7 @@ importers:
         version: 14.0.3(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       ponder:
         specifier: ^0.11.18
-        version: 0.11.19(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@20.19.1)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67)
+        version: 0.11.19(@opentelemetry/api@1.9.0)(@types/node@20.19.1)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67)
       postcss:
         specifier: ^8
         version: 8.5.6
@@ -236,8 +231,8 @@ importers:
         specifier: ^4.8.2
         version: 4.8.2
       ponder:
-        specifier: ^0.11.20
-        version: 0.11.20(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67)
+        specifier: ^0.11.35
+        version: 0.11.35(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67)
       viem:
         specifier: ^2.31.3
         version: 2.31.3(typescript@5.8.3)(zod@3.25.67)
@@ -1517,6 +1512,15 @@ packages:
 
   '@ponder/utils@0.2.8':
     resolution: {integrity: sha512-eI3ijbE/eLeA4tEYA7QoIDPRsf+qhTKs1oTW33Ik4CaJPmTAxsYN5KZYxQwNqGwOPFHQn60QvAQ7+Ti2n9ql6Q==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+      viem: '>=2'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@ponder/utils@0.2.9':
+    resolution: {integrity: sha512-lyvxgHXQbJugLFaNMIHB0oLy6uRfUC0SddxOgx/CSTnv/fT2RXM6/pXz9D9ODfPY7LcAu3fNOZBbCCU0PoVO+g==}
     peerDependencies:
       typescript: '>=5.0.4'
       viem: '>=2'
@@ -4540,8 +4544,8 @@ packages:
       typescript:
         optional: true
 
-  ponder@0.11.20:
-    resolution: {integrity: sha512-v0q/wxV5WK4BsxwmV/+4elonBMZsy4JiLcoYQuOCFTnScgHAjYXjeBz1a8JdmfsJ4kwfdhQsXy2wu0LfW8w5Bg==}
+  ponder@0.11.35:
+    resolution: {integrity: sha512-fYSD4RjLfGHIg8ACGnFTk3SJtPsNZMWwLkxjo0c1q0rLVLz+dKU5L96OD/mSHKPAX1iWaRHwPS2mlt0GjWjoSQ==}
     engines: {node: '>=18.14'}
     hasBin: true
     peerDependencies:
@@ -6843,6 +6847,12 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.3
 
+  '@ponder/utils@0.2.9(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))':
+    dependencies:
+      viem: 2.31.3(typescript@5.8.3)(zod@3.25.67)
+    optionalDependencies:
+      typescript: 5.8.3
+
   '@popperjs/core@2.11.8': {}
 
   '@repeaterjs/repeater@3.0.6': {}
@@ -8332,7 +8342,7 @@ snapshots:
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
       eslint-plugin-jsx-a11y: 6.10.2(eslint@8.57.1)
       eslint-plugin-react: 7.37.5(eslint@8.57.1)
       eslint-plugin-react-hooks: 5.0.0-canary-7118f5dd7-20230705(eslint@8.57.1)
@@ -8368,7 +8378,7 @@ snapshots:
       tinyglobby: 0.2.14
       unrs-resolver: 1.9.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -8383,7 +8393,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -10167,7 +10177,7 @@ snapshots:
     dependencies:
       find-up: 4.1.0
 
-  ponder@0.11.19(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@20.19.1)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67):
+  ponder@0.11.19(@opentelemetry/api@1.9.0)(@types/node@20.19.1)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67):
     dependencies:
       '@babel/code-frame': 7.27.1
       '@commander-js/extra-typings': 12.1.0(commander@12.1.0)
@@ -10245,7 +10255,7 @@ snapshots:
       - terser
       - zod
 
-  ponder@0.11.20(patch_hash=262e92a851cb531abd0bbd455065f09abf79f3fbf2bf97d48a2c12d91ddd8785)(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67):
+  ponder@0.11.35(@opentelemetry/api@1.9.0)(@types/node@24.0.3)(hono@4.8.2)(lightningcss@1.30.1)(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))(zod@3.25.67):
     dependencies:
       '@babel/code-frame': 7.27.1
       '@commander-js/extra-typings': 12.1.0(commander@12.1.0)
@@ -10254,7 +10264,7 @@ snapshots:
       '@escape.tech/graphql-armor-max-depth': 2.4.1
       '@escape.tech/graphql-armor-max-tokens': 2.5.1
       '@hono/node-server': 1.13.3(hono@4.8.2)
-      '@ponder/utils': 0.2.8(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))
+      '@ponder/utils': 0.2.9(typescript@5.8.3)(viem@2.31.3(typescript@5.8.3)(zod@3.25.67))
       abitype: 0.10.3(typescript@5.8.3)(zod@3.25.67)
       ansi-escapes: 7.0.0
       commander: 12.1.0
